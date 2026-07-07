@@ -3,7 +3,11 @@ class MacrosExecutionJob < ApplicationJob
 
   def perform(macro, conversation_ids:, user:)
     account = macro.account
-    conversations = account.conversations.where(display_id: conversation_ids.to_a)
+    conversations = Conversations::PermissionFilterService.new(
+      account.conversations.where(display_id: conversation_ids.to_a),
+      user,
+      account
+    ).perform
 
     return if conversations.blank?
 

@@ -26,6 +26,13 @@ describe('Conversation Helpers', () => {
       },
     };
 
+    const conversationWithParticipant = {
+      meta: {
+        assignee: null,
+        participant_ids: [1],
+      },
+    };
+
     // Test for administrator role
     it('always returns true for administrator role regardless of permissions', () => {
       const role = 'administrator';
@@ -58,9 +65,8 @@ describe('Conversation Helpers', () => {
       ).toBe(true);
     });
 
-    // Test for agent role
-    it('always returns true for agent role regardless of permissions', () => {
-      const role = 'agent';
+    it('always returns true for supervisor role regardless of permissions', () => {
+      const role = 'supervisor';
       const permissions = [];
       const currentUserId = 1;
 
@@ -83,6 +89,46 @@ describe('Conversation Helpers', () => {
       expect(
         applyRoleFilter(
           conversationWithoutAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(true);
+    });
+
+    // Test for agent role
+    it('returns true for agent role only when assigned or participating', () => {
+      const role = 'agent';
+      const permissions = [];
+      const currentUserId = 1;
+
+      expect(
+        applyRoleFilter(
+          conversationWithAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(true);
+      expect(
+        applyRoleFilter(
+          conversationWithDifferentAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(false);
+      expect(
+        applyRoleFilter(
+          conversationWithoutAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(false);
+      expect(
+        applyRoleFilter(
+          conversationWithParticipant,
           role,
           permissions,
           currentUserId
@@ -188,6 +234,17 @@ describe('Conversation Helpers', () => {
             currentUserId
           )
         ).toBe(false);
+      });
+
+      it('returns true for conversations where the user participates', () => {
+        expect(
+          applyRoleFilter(
+            conversationWithParticipant,
+            role,
+            permissions,
+            currentUserId
+          )
+        ).toBe(true);
       });
 
       it('returns false for conversations assigned to other users', () => {

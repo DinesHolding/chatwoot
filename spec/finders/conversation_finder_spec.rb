@@ -46,6 +46,7 @@ describe ConversationFinder do
       it 'returns conversation from inbox if agent is its member' do
         params = { inbox_id: restricted_inbox.id }
         create(:inbox_member, user: user_1, inbox: restricted_inbox)
+        create(:conversation_participant, conversation: restricted_conversation, user: user_1)
         result = described_class.new(user_1, params).perform
 
         expect(result[:conversations].map(&:id)).to include(restricted_conversation.id)
@@ -74,7 +75,7 @@ describe ConversationFinder do
 
       it 'filter conversations by assignee type all' do
         result = conversation_finder.perform
-        expect(result[:conversations].length).to be 4
+        expect(result[:conversations].length).to be 2
       end
     end
 
@@ -83,7 +84,7 @@ describe ConversationFinder do
 
       it 'filter conversations by assignee type unassigned' do
         result = conversation_finder.perform
-        expect(result[:conversations].length).to be 1
+        expect(result[:conversations].length).to be 0
       end
     end
 
@@ -92,7 +93,7 @@ describe ConversationFinder do
 
       it 'returns all conversations' do
         result = conversation_finder.perform
-        expect(result[:conversations].length).to be 5
+        expect(result[:conversations].length).to be 3
       end
     end
 
@@ -100,13 +101,13 @@ describe ConversationFinder do
       let(:params) { { status: 'open', sort_by: 'unread' } }
 
       it 'returns all conversations matching the selected status with the highest unread count first' do
-        most_unread_conversation = create(:conversation, account: account, inbox: inbox,
+        most_unread_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1,
                                                          agent_last_seen_at: 1.hour.ago)
-        unread_conversation = create(:conversation, account: account, inbox: inbox,
+        unread_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1,
                                                     agent_last_seen_at: 1.hour.ago)
-        read_conversation = create(:conversation, account: account, inbox: inbox,
+        read_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1,
                                                   agent_last_seen_at: 1.minute.from_now)
-        resolved_unread_conversation = create(:conversation, account: account, inbox: inbox, status: 'resolved',
+        resolved_unread_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1, status: 'resolved',
                                                              agent_last_seen_at: 1.hour.ago)
 
         [most_unread_conversation, unread_conversation, read_conversation, resolved_unread_conversation].each do |conversation|
@@ -129,11 +130,11 @@ describe ConversationFinder do
       end
 
       it 'includes private incoming messages in unread counts used for ordering' do
-        private_unread_conversation = create(:conversation, account: account, inbox: inbox,
+        private_unread_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1,
                                                             agent_last_seen_at: 1.hour.ago)
-        unread_conversation = create(:conversation, account: account, inbox: inbox,
+        unread_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1,
                                                     agent_last_seen_at: 1.hour.ago)
-        read_conversation = create(:conversation, account: account, inbox: inbox,
+        read_conversation = create(:conversation, account: account, inbox: inbox, assignee: user_1,
                                                   agent_last_seen_at: 1.minute.from_now)
 
         2.times do
@@ -162,16 +163,16 @@ describe ConversationFinder do
 
       it 'filter conversations by assignee type assigned' do
         result = conversation_finder.perform
-        expect(result[:conversations].length).to be 3
+        expect(result[:conversations].length).to be 2
       end
 
       it 'returns the correct meta' do
         result = conversation_finder.perform
         expect(result[:count]).to eq({
                                        mine_count: 2,
-                                       assigned_count: 3,
-                                       unassigned_count: 1,
-                                       all_count: 4
+                                       assigned_count: 2,
+                                       unassigned_count: 0,
+                                       all_count: 2
                                      })
       end
     end
@@ -181,7 +182,7 @@ describe ConversationFinder do
       let(:params) { { team_id: team.id } }
 
       it 'filter conversations by team' do
-        create(:conversation, account: account, inbox: inbox, team: team)
+        create(:conversation, account: account, inbox: inbox, team: team, assignee: user_1)
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 1
       end
@@ -204,7 +205,7 @@ describe ConversationFinder do
 
       it 'filter conversations by source id' do
         result = conversation_finder.perform
-        expect(result[:conversations].length).to be 1
+        expect(result[:conversations].length).to be 0
       end
     end
 
@@ -213,18 +214,18 @@ describe ConversationFinder do
 
       it 'returns conversations with any source' do
         result = conversation_finder.perform
-        expect(result[:conversations].length).to be 4
+        expect(result[:conversations].length).to be 2
       end
     end
 
     context 'with updated_within' do
-      let(:params) { { updated_within: 20, assignee_type: 'unassigned', sort_by: 'created_at_asc' } }
+      let(:params) { { updated_within: 20, assignee_type: 'me', sort_by: 'created_at_asc' } }
 
       it 'filters based on params, sort order but returns all conversations without pagination with in time range' do
         # value of updated_within is in seconds
         # write spec based on that
         conversations = create_list(:conversation, 50, account: account,
-                                                       inbox: inbox, assignee: nil,
+                                                       inbox: inbox, assignee: user_1,
                                                        updated_at: Time.now.utc - 30.seconds,
                                                        created_at: Time.now.utc - 30.seconds)
         # update updated_at of 27 conversations to be with in 20 seconds
@@ -234,8 +235,8 @@ describe ConversationFinder do
         result = conversation_finder.perform
         # pagination is not applied
         # filters are applied
-        # modified conversations + 1 conversation created during set up
-        expect(result[:conversations].length).to be 29
+        # modified conversations + 2 conversations created during set up
+        expect(result[:conversations].length).to be 30
         # ensure that the conversations are sorted by created_at
         expect(result[:conversations].first.created_at).to be < result[:conversations].last.created_at
       end
@@ -264,9 +265,9 @@ describe ConversationFinder do
         result = conversation_finder.perform_meta_only
         expect(result[:count]).to eq({
                                        mine_count: 2,
-                                       assigned_count: 3,
-                                       unassigned_count: 1,
-                                       all_count: 4
+                                       assigned_count: 2,
+                                       unassigned_count: 0,
+                                       all_count: 2
                                      })
       end
 

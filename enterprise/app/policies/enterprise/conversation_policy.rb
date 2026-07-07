@@ -1,16 +1,20 @@
 module Enterprise::ConversationPolicy
   def show?
-    return false unless super
-    return true unless custom_role_permissions?
+    return super unless custom_role_permissions?
+    return true if administrator? || supervisor? || agent_bot?
 
     permissions = custom_role_permissions
-    return true if manage_all_conversations?(permissions)
-    return true if permits_unassigned_manage?(permissions)
+    return true if manage_all_conversations?(permissions) && inbox_or_team_access?
+    return true if permits_unassigned_manage?(permissions) && inbox_or_team_access?
 
     permits_participating?(permissions)
   end
 
   private
+
+  def inbox_or_team_access?
+    inbox_access? || team_access?
+  end
 
   def manage_all_conversations?(permissions)
     permissions.include?('conversation_manage')

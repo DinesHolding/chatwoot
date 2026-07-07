@@ -14,8 +14,8 @@ properties:
     example: 'john.doe@acme.inc'
   role:
     type: string
-    enum: ['agent', 'administrator']
-    description: Whether its administrator or agent
+    enum: ['agent', 'administrator', 'supervisor']
+    description: Whether its administrator, supervisor or agent
     example: 'agent'
   availability:
     type: string

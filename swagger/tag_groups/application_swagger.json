@@ -609,8 +609,8 @@
               }
             }
           },
-          "404": {
-            "description": "Agent not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -619,8 +619,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Agent not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -658,8 +658,8 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Agent not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -668,8 +668,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Agent not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -822,8 +822,8 @@
               }
             }
           },
-          "404": {
-            "description": "Agent not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -832,8 +832,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Agent not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -871,8 +871,8 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Canned Response not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -881,8 +881,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Canned Response not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1118,8 +1118,8 @@
               }
             }
           },
-          "404": {
-            "description": "Agent not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1128,8 +1128,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Agent not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1170,8 +1170,8 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Custom attribute not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1180,8 +1180,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Custom attribute not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1329,8 +1329,8 @@
               }
             }
           },
-          "404": {
-            "description": "Contact not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1339,8 +1339,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Contact not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1384,8 +1384,8 @@
               }
             }
           },
-          "404": {
-            "description": "Contact not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1394,8 +1394,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Contact not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1494,8 +1494,8 @@
               }
             }
           },
-          "404": {
-            "description": "Contact not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1504,8 +1504,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Contact not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3387,8 +3387,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3397,8 +3397,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3764,8 +3764,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3774,8 +3774,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3835,8 +3835,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -3845,8 +3845,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3955,8 +3955,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -3965,8 +3965,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4156,8 +4156,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4166,8 +4166,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4217,8 +4217,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4227,8 +4227,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4420,8 +4420,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4430,8 +4430,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4481,8 +4481,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found, Agent bot not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4491,8 +4491,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found, Agent bot not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4555,8 +4555,8 @@
           "204": {
             "description": "Success"
           },
-          "404": {
-            "description": "Inbox not found, Agent bot not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4565,8 +4565,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found, Agent bot not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4624,8 +4624,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4634,8 +4634,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4716,8 +4716,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4726,8 +4726,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4811,8 +4811,8 @@
               }
             }
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4821,8 +4821,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -4886,8 +4886,8 @@
           "200": {
             "description": "Success"
           },
-          "404": {
-            "description": "Inbox not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -4896,8 +4896,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Inbox not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5252,8 +5252,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
@@ -5262,8 +5262,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5397,8 +5397,8 @@
               }
             }
           },
-          "404": {
-            "description": "Conversation not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -5407,8 +5407,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "Conversation not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -6982,8 +6982,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -6992,8 +6992,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7061,8 +7061,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7071,8 +7071,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7137,8 +7137,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7147,8 +7147,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -7213,8 +7213,8 @@
               }
             }
           },
-          "404": {
-            "description": "reports not found",
+          "403": {
+            "description": "Access denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7223,8 +7223,8 @@
               }
             }
           },
-          "403": {
-            "description": "Access denied",
+          "404": {
+            "description": "reports not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -9384,7 +9384,12 @@
             },
             "role": {
               "type": "string",
-              "description": "whether user is an administrator or agent"
+              "description": "whether user is an administrator, supervisor or agent",
+              "enum": [
+                "administrator",
+                "agent",
+                "supervisor"
+              ]
             }
           }
         }
@@ -10262,8 +10267,13 @@
           },
           "role": {
             "type": "string",
-            "description": "whether user is an administrator or agent",
-            "example": "administrator"
+            "description": "whether user is an administrator, supervisor or agent",
+            "example": "administrator",
+            "enum": [
+              "administrator",
+              "agent",
+              "supervisor"
+            ]
           }
         }
       },
@@ -10462,7 +10472,7 @@
               "agent",
               "administrator"
             ],
-            "description": "Whether its administrator or agent",
+            "description": "Whether its administrator, supervisor or agent",
             "example": "agent"
           },
           "availability": {
@@ -10494,7 +10504,7 @@
               "agent",
               "administrator"
             ],
-            "description": "Whether its administrator or agent",
+            "description": "Whether its administrator, supervisor or agent",
             "example": "agent"
           },
           "availability": {

@@ -23,6 +23,7 @@ json.meta do
       json.partial! 'api/v1/models/team', formats: [:json], resource: conversation.team
     end
   end
+  json.participant_ids conversation.conversation_participants.map(&:user_id)
   json.hmac_verified conversation.contact_inbox&.hmac_verified
 end
 

@@ -7,6 +7,7 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
   let!(:unassigned_conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
   let!(:another_assigned_conversation) { create(:conversation, account: account, inbox: inbox, assignee: create(:user, account: account)) }
   let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:supervisor) { create(:user, account: account, role: :supervisor) }
   let(:agent) { create(:user, account: account, role: :agent) }
   let!(:inbox) { create(:inbox, account: account) }
   let!(:inbox2) { create(:inbox, account: account) }
@@ -31,8 +32,25 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
       end
     end
 
+    context 'when user is a supervisor' do
+      it 'returns all conversations' do
+        result = Conversations::PermissionFilterService.new(
+          account.conversations,
+          supervisor,
+          account
+        ).perform
+
+        expect(result).to include(assigned_conversation)
+        expect(result).to include(unassigned_conversation)
+        expect(result).to include(another_assigned_conversation)
+        expect(result).to include(another_inbox_conversation)
+        expect(result.count).to eq(4)
+      end
+    end
+
     context 'when user is a regular agent' do
-      it 'returns all conversations in assigned inboxes' do
+      it 'returns only assigned or participating conversations' do
+        create(:conversation_participant, conversation: unassigned_conversation, user: agent)
         result = Conversations::PermissionFilterService.new(
           account.conversations,
           agent,
@@ -41,9 +59,9 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
 
         expect(result).to include(assigned_conversation)
         expect(result).to include(unassigned_conversation)
-        expect(result).to include(another_assigned_conversation)
+        expect(result).not_to include(another_assigned_conversation)
         expect(result).not_to include(another_inbox_conversation)
-        expect(result.count).to eq(3)
+        expect(result.count).to eq(2)
       end
     end
 
@@ -86,7 +104,7 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
     end
 
     context 'when user has conversation_participating_manage permission' do
-      it 'returns only conversations assigned to the agent' do
+      it 'returns only conversations assigned to the agent or where the agent participates' do
         # Create a new isolated test environment
         test_account = create(:account)
         test_inbox = create(:inbox, account: test_account)
@@ -105,6 +123,8 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
         # Create some conversations
         other_conversation = create(:conversation, account: test_account, inbox: test_inbox)
         assigned_conversation = create(:conversation, account: test_account, inbox: test_inbox, assignee: test_agent)
+        participating_conversation = create(:conversation, account: test_account, inbox: test_inbox)
+        create(:conversation_participant, conversation: participating_conversation, user: test_agent)
         other_inbox_conversation = create(:conversation, account: test_account, inbox: test_inbox2, assignee: nil)
 
         # Run the test
@@ -114,10 +134,10 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
           test_account
         ).perform
 
-        # Should only see conversations assigned to this agent
-        expect(result.count).to eq(1)
-        expect(result.first.assignee).to eq(test_agent)
+        # Should only see conversations assigned to this agent or where this agent participates
+        expect(result.count).to eq(2)
         expect(result).to include(assigned_conversation)
+        expect(result).to include(participating_conversation)
         expect(result).not_to include(other_conversation)
         expect(result).not_to include(other_inbox_conversation)
       end

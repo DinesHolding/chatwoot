@@ -36,7 +36,7 @@ properties:
     type: string
   role:
     type: string
-    enum: ['agent', 'administrator']
+    enum: ['agent', 'administrator', 'supervisor']
   ui_settings:
     type: object
   uid:
@@ -66,7 +66,7 @@ properties:
           format: date-time
         role:
           type: string
-          enum: ['administrator', 'agent']
+          enum: ['administrator', 'agent', 'supervisor']
         permissions:
           type: array
           items:

@@ -27,7 +27,8 @@ responses:
               description: The ID of the user
             role:
               type: string
-              description: whether user is an administrator or agent
+              enum: ['administrator', 'agent', 'supervisor']
+              description: whether user is an administrator, supervisor or agent
 
   '401':
     description: Unauthorized

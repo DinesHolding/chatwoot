@@ -11,10 +11,9 @@ class Captain::Copilot::ChatService < Llm::BaseAiService
     @user = nil
     @copilot_thread = nil
     @previous_history = []
-    @conversation = @account.conversations.find_by(display_id: config[:conversation_id])
-    @conversation_id = @conversation&.display_id
-
     setup_user(config)
+    @conversation = accessible_conversation(config[:conversation_id])
+    @conversation_id = @conversation&.display_id
     setup_message_history(config)
     @tools = build_tools
     @messages = build_messages(config)
@@ -98,7 +97,7 @@ class Captain::Copilot::ChatService < Llm::BaseAiService
   end
 
   def current_viewing_history(conversation_id)
-    conversation = @account.conversations.find_by(display_id: conversation_id)
+    conversation = accessible_conversation(conversation_id)
     return [] unless conversation
 
     Rails.logger.info("#{self.class.name} Assistant: #{@assistant.id}, Setting viewing history for conversation_id=#{conversation_id}")
@@ -111,6 +110,16 @@ class Captain::Copilot::ChatService < Llm::BaseAiService
         Contact ID: #{contact_id}
       HISTORY
     }]
+  end
+
+  def accessible_conversation(conversation_id)
+    return if conversation_id.blank? || @user.blank?
+
+    Conversations::PermissionFilterService.new(
+      @account.conversations.where(display_id: conversation_id),
+      @user,
+      @account
+    ).perform.first
   end
 
   def persist_message(message, message_type = 'assistant')

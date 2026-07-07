@@ -29,7 +29,7 @@ properties:
     description: The name of the agent
   role:
     type: string
-    enum: ['agent', 'administrator']
+    enum: ['agent', 'administrator', 'supervisor']
     description: The role of the agent
   thumbnail:
     type: string

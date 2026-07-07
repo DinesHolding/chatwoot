@@ -2294,7 +2294,12 @@
             },
             "role": {
               "type": "string",
-              "description": "whether user is an administrator or agent"
+              "description": "whether user is an administrator, supervisor or agent",
+              "enum": [
+                "administrator",
+                "agent",
+                "supervisor"
+              ]
             }
           }
         }
@@ -3172,8 +3177,13 @@
           },
           "role": {
             "type": "string",
-            "description": "whether user is an administrator or agent",
-            "example": "administrator"
+            "description": "whether user is an administrator, supervisor or agent",
+            "example": "administrator",
+            "enum": [
+              "administrator",
+              "agent",
+              "supervisor"
+            ]
           }
         }
       },
@@ -3372,7 +3382,7 @@
               "agent",
               "administrator"
             ],
-            "description": "Whether its administrator or agent",
+            "description": "Whether its administrator, supervisor or agent",
             "example": "agent"
           },
           "availability": {
@@ -3404,7 +3414,7 @@
               "agent",
               "administrator"
             ],
-            "description": "Whether its administrator or agent",
+            "description": "Whether its administrator, supervisor or agent",
             "example": "agent"
           },
           "availability": {

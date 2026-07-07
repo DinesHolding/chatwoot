@@ -23,7 +23,7 @@ module Enterprise::Conversations::PermissionFilterService
     elsif permissions.include?('conversation_unassigned_manage')
       filter_unassigned_and_mine
     elsif permissions.include?('conversation_participating_manage')
-      accessible_conversations.assigned_to(user)
+      assigned_or_participating_conversations
     else
       Conversation.none
     end

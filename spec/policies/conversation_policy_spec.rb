@@ -5,8 +5,10 @@ RSpec.describe ConversationPolicy, type: :policy do
 
   let(:account) { create(:account) }
   let(:administrator) { create(:user, account: account, role: :administrator) }
+  let(:supervisor) { create(:user, account: account, role: :supervisor) }
   let(:agent) { create(:user, account: account, role: :agent) }
   let(:administrator_context) { { user: administrator, account: account, account_user: administrator.account_users.find_by(account: account) } }
+  let(:supervisor_context) { { user: supervisor, account: account, account_user: supervisor.account_users.find_by(account: account) } }
   let(:agent_context) { { user: agent, account: account, account_user: agent.account_users.find_by(account: account) } }
 
   let(:conversation) { create(:conversation, account: account) }
@@ -40,25 +42,47 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
 
-    context 'when agent has inbox access' do
-      let(:inbox) { create(:inbox, account: account) }
-      let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+    context 'when user is a supervisor' do
+      it 'allows access' do
+        expect(subject).to permit(supervisor_context, conversation)
+      end
+    end
 
-      before { create(:inbox_member, user: agent, inbox: inbox) }
+    context 'when agent is assigned to the conversation' do
+      let(:conversation) { create(:conversation, account: account, assignee: agent) }
 
       it 'allows access' do
         expect(subject).to permit(agent_context, conversation)
       end
     end
 
-    context 'when agent has team access' do
+    context 'when agent is a participant in the conversation' do
+      before { create(:conversation_participant, conversation: conversation, user: agent) }
+
+      it 'allows access' do
+        expect(subject).to permit(agent_context, conversation)
+      end
+    end
+
+    context 'when agent only has inbox access' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+
+      before { create(:inbox_member, user: agent, inbox: inbox) }
+
+      it 'denies access' do
+        expect(subject).not_to permit(agent_context, conversation)
+      end
+    end
+
+    context 'when agent only has team access' do
       let(:team) { create(:team, account: account) }
       let(:conversation) { create(:conversation, :with_team, account: account, team: team) }
 
       before { create(:team_member, team: team, user: agent) }
 
-      it 'allows access' do
-        expect(subject).to permit(agent_context, conversation)
+      it 'denies access' do
+        expect(subject).not_to permit(agent_context, conversation)
       end
     end
 

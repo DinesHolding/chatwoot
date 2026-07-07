@@ -81,18 +81,27 @@ export const applyRoleFilter = (
   // the backend handles this by checking the custom_role_id at the user model
   // here however, the `getUserRole` returns "custom_role" if the id is present,
   // so we can check the role === "agent" directly
-  if (['administrator', 'agent'].includes(role)) {
-    return true;
-  }
-
-  // Check for full conversation management permission
-  if (permissions.includes('conversation_manage')) {
+  if (['administrator', 'supervisor'].includes(role)) {
     return true;
   }
 
   const conversationAssignee = conversation.meta.assignee;
   const isUnassigned = !conversationAssignee;
   const isAssignedToUser = conversationAssignee?.id === currentUserId;
+  const participantIds =
+    conversation.meta.participant_ids || conversation.meta.participantIds || [];
+  const isParticipant = participantIds
+    .map(id => Number(id))
+    .includes(Number(currentUserId));
+
+  if (role === 'agent') {
+    return isAssignedToUser || isParticipant;
+  }
+
+  // Check for full conversation management permission
+  if (permissions.includes('conversation_manage')) {
+    return true;
+  }
 
   // Check unassigned management permission
   if (permissions.includes('conversation_unassigned_manage')) {
@@ -101,7 +110,7 @@ export const applyRoleFilter = (
 
   // Check participating conversation management permission
   if (permissions.includes('conversation_participating_manage')) {
-    return isAssignedToUser;
+    return isAssignedToUser || isParticipant;
   }
 
   return false;

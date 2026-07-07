@@ -150,15 +150,19 @@ class Conversations::UnreadCounts::Counter
 
   def permission_mode
     @permission_mode ||=
-      if !custom_role_agent? || permissions.include?(MANAGE_ALL_PERMISSION)
+      if full_conversation_access? || (custom_role_agent? && permissions.include?(MANAGE_ALL_PERMISSION))
         :base
-      elsif permissions.include?(UNASSIGNED_PERMISSION)
+      elsif custom_role_agent? && permissions.include?(UNASSIGNED_PERMISSION)
         :unassigned_and_mine
-      elsif permissions.include?(PARTICIPATING_PERMISSION)
+      elsif !custom_role_agent? || permissions.include?(PARTICIPATING_PERMISSION)
         :mine
       else
         :none
       end
+  end
+
+  def full_conversation_access?
+    account_user&.administrator? || account_user&.supervisor?
   end
 
   def custom_role_agent?
@@ -174,8 +178,10 @@ class Conversations::UnreadCounts::Counter
   end
 
   def visible_inbox_ids
-    @visible_inbox_ids ||= if account_user&.administrator?
+    @visible_inbox_ids ||= if full_conversation_access?
                              account.inboxes.pluck(:id)
+                           elsif permission_mode == :mine
+                             assigned_or_participating_conversations.distinct.pluck(:inbox_id)
                            else
                              user.inboxes.where(account_id: account.id).pluck(:id)
                            end
@@ -186,11 +192,21 @@ class Conversations::UnreadCounts::Counter
   end
 
   def visible_team_ids
-    @visible_team_ids ||= if account_user&.administrator?
+    @visible_team_ids ||= if full_conversation_access?
                             account.teams.pluck(:id)
+                          elsif permission_mode == :mine
+                            assigned_or_participating_conversations.where.not(team_id: nil).distinct.pluck(:team_id)
                           else
                             user.teams.where(account_id: account.id).pluck(:id)
                           end
+  end
+
+  def assigned_or_participating_conversations
+    account.conversations.left_outer_joins(:conversation_participants)
+           .where(
+             'conversations.assignee_id = :user_id OR conversation_participants.user_id = :user_id',
+             user_id: user.id
+           )
   end
 
   def empty_counts

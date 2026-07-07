@@ -52,6 +52,7 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
     return nil unless conversation
     return nil unless conversation.inbox_id == voice_inbox.id && conversation.contact_id == contact.id
     return nil unless conversation.open?
+    return nil unless ConversationPolicy.new(pundit_user, conversation).show?
 
     conversation
   end

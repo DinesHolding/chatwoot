@@ -24,7 +24,12 @@ const PortalsSettingsIndexPage = () =>
 
 const meta = {
   featureFlag: FEATURE_FLAGS.HELP_CENTER,
-  permissions: ['administrator', 'agent', 'knowledge_base_manage'],
+  permissions: [
+    'administrator',
+    'supervisor',
+    'agent',
+    'knowledge_base_manage',
+  ],
 };
 const portalRoutes = [
   {

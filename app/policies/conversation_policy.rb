@@ -8,17 +8,23 @@ class ConversationPolicy < ApplicationPolicy
   end
 
   def show?
-    administrator? || agent_bot? || agent_can_view_conversation?
+    administrator? || supervisor? || agent_bot? || agent_can_view_conversation?
   end
 
   private
 
   def agent_can_view_conversation?
-    inbox_access? || team_access?
+    return false if user.blank?
+
+    assigned_to_user? || participant?
   end
 
   def administrator?
     account_user&.administrator?
+  end
+
+  def supervisor?
+    account_user&.supervisor?
   end
 
   def agent_bot?

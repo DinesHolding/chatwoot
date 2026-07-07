@@ -31,9 +31,8 @@ class SearchService
   end
 
   def filter_conversations
-    conversations_query = current_account.conversations.where(inbox_id: accessable_inbox_ids)
-                                         .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
-                                         .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
+    conversations_query = visible_conversations.joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
+                                               .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
                             ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
 
     if current_account.feature_enabled?('advanced_search')
@@ -105,8 +104,8 @@ class SearchService
   end
 
   def message_base_query
-    query = current_account.messages.where('created_at >= ?', 3.months.ago)
-    query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
+    query = current_account.messages.where('messages.created_at >= ?', 3.months.ago)
+    query = query.where(conversation_id: visible_conversations.select(:id)) unless should_skip_inbox_filtering?
     query
   end
 
@@ -150,11 +149,15 @@ class SearchService
   end
 
   def should_skip_inbox_filtering?
-    account_user.administrator? || user_has_access_to_all_inboxes?
+    account_user&.administrator? || account_user&.supervisor?
   end
 
-  def user_has_access_to_all_inboxes?
-    accessable_inbox_ids.sort == current_account.inboxes.pluck(:id).sort
+  def visible_conversations
+    @visible_conversations ||= Conversations::PermissionFilterService.new(
+      current_account.conversations,
+      current_user,
+      current_account
+    ).perform
   end
 
   def use_gin_search

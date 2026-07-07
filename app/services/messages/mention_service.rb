@@ -40,7 +40,7 @@ class Messages::MentionService
   def valid_mentionable_user_ids
     @valid_mentionable_user_ids ||= begin
       inbox = message.inbox
-      inbox.account.administrators.pluck(:id) + inbox.members.pluck(:id)
+      inbox.account.administrators.pluck(:id) + inbox.account.supervisors.pluck(:id) + inbox.members.pluck(:id)
     end
   end
 
