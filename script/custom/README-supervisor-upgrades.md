@@ -14,18 +14,19 @@ This branch carries the Grupo Dines customization on top of upstream Chatwoot.
 Current local remotes:
 
 ```bash
-origin    ../chatwoot-custom.git
+origin    https://github.com/DinesHolding/chatwoot.git
+local-backup  ../chatwoot-custom.git
 upstream  https://github.com/chatwoot/chatwoot.git
 ```
 
-`origin` is a local bare repository in the parent folder. It is enough to keep the custom branch and deploy tag backed up on this machine.
+`origin` is the DinesHolding repository. `local-backup` is a bare repository in the parent folder, kept only as a local fallback.
 
-When a private GitHub repository is available, replace the local `origin` URL and push the branch/tags:
+If `origin` ever needs to be restored manually, use:
 
 ```bash
-git remote set-url origin git@github.com:<owner>/chatwoot-custom.git
+git remote set-url origin https://github.com/DinesHolding/chatwoot.git
 git push -u origin gd-supervisor-conversation-scope
-git push origin --tags
+git push origin prod/chatwoot-supervisor-20260707171100
 ```
 
 Expected long-term remotes:
