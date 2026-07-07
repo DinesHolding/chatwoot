@@ -8,6 +8,7 @@ export const AVAILABLE_CUSTOM_ROLE_PERMISSIONS = [
 ];
 
 export const ROLES = ['agent', 'administrator', 'supervisor'];
+export const FULL_CONVERSATION_ACCESS_ROLES = ['administrator', 'supervisor'];
 
 export const CONVERSATION_PERMISSIONS = [
   'conversation_manage',
@@ -37,7 +38,7 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
   unassigned: {
     count: 'unAssignedCount',
     permissions: [
-      ...ROLES,
+      ...FULL_CONVERSATION_ACCESS_ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
       CONVERSATION_UNASSIGNED_PERMISSIONS,
     ],
@@ -45,9 +46,8 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
   all: {
     count: 'allCount',
     permissions: [
-      ...ROLES,
+      ...FULL_CONVERSATION_ACCESS_ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
-      CONVERSATION_PARTICIPATING_PERMISSIONS,
     ],
   },
 };

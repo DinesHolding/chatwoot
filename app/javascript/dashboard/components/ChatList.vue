@@ -187,6 +187,10 @@ const assigneeTabItems = computed(() => {
   }));
 });
 
+const allowedAssigneeTabKeys = computed(() =>
+  assigneeTabItems.value.map(item => item.key)
+);
+
 const showAssigneeInConversationCard = computed(() => {
   return (
     hasAppliedFiltersOrActiveFolders.value ||
@@ -222,8 +226,8 @@ const conversationCustomAttributes = useFunctionGetter(
 const activeAssigneeTabCount = computed(() => {
   const count = assigneeTabItems.value.find(
     item => item.key === activeAssigneeTab.value
-  ).count;
-  return count;
+  )?.count;
+  return count || 0;
 });
 
 const conversationListPagination = computed(() => {
@@ -572,6 +576,18 @@ function fetchConversations() {
   store.dispatch('fetchAllConversations').then(emitConversationLoaded);
 }
 
+function isAssigneeTabAllowed(tabKey) {
+  return allowedAssigneeTabKeys.value.includes(tabKey);
+}
+
+function normalizeActiveAssigneeTab() {
+  if (isAssigneeTabAllowed(activeAssigneeTab.value)) return false;
+
+  activeAssigneeTab.value =
+    allowedAssigneeTabKeys.value[0] || wootConstants.ASSIGNEE_TYPE.ME;
+  return true;
+}
+
 function resetAndFetchData() {
   appliedFilter.value = [];
   resetBulkActions();
@@ -604,6 +620,8 @@ function loadMoreConversations() {
 }
 
 function updateAssigneeTab(selectedTab) {
+  if (!isAssigneeTabAllowed(selectedTab)) return;
+
   if (activeAssigneeTab.value !== selectedTab) {
     resetBulkActions();
     emitter.emit('clearSearchInput');
@@ -850,6 +868,13 @@ provide('isConversationSelected', isConversationSelected);
 provide('deleteConversation', handleDelete);
 
 watch(activeTeam, () => resetAndFetchData());
+
+watch(assigneeTabItems, () => {
+  if (normalizeActiveAssigneeTab()) {
+    resetBulkActions();
+    resetAndFetchData();
+  }
+});
 
 watch(
   computed(() => props.conversationInbox),
