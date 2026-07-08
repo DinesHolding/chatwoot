@@ -80,8 +80,19 @@ const getters = {
     return _state.allConversations.filter(conversation => {
       const { assignee } = conversation.meta;
       const isAssignedToMe = assignee && assignee.id === currentUserID;
+      const participantIds =
+        conversation.meta.participant_ids ||
+        conversation.meta.participantIds ||
+        [];
+      const isParticipant = participantIds
+        .map(id => Number(id))
+        .includes(Number(currentUserID));
+      const isInboxSupervisor = Boolean(
+        conversation.meta.inbox_supervisor || conversation.meta.inboxSupervisor
+      );
       const shouldFilter = applyPageFilters(conversation, activeFilters);
-      const isChatMine = isAssignedToMe && shouldFilter;
+      const isChatMine =
+        (isAssignedToMe || isParticipant || isInboxSupervisor) && shouldFilter;
 
       return isChatMine;
     });

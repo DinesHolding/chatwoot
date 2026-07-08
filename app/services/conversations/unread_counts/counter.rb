@@ -100,6 +100,12 @@ class Conversations::UnreadCounts::Counter
     case permission_mode
     when :base
       [store.inbox_key(account.id, inbox_id)]
+    when :supervised_and_mine
+      if supervised_inbox_ids.include?(inbox_id)
+        [store.inbox_key(account.id, inbox_id)]
+      else
+        [store.inbox_assignee_key(account.id, inbox_id, user.id)]
+      end
     when :unassigned_and_mine
       [store.inbox_unassigned_key(account.id, inbox_id), store.inbox_assignee_key(account.id, inbox_id, user.id)]
     when :mine
@@ -111,6 +117,12 @@ class Conversations::UnreadCounts::Counter
     case permission_mode
     when :base
       [store.label_inbox_key(account.id, label_id, inbox_id)]
+    when :supervised_and_mine
+      if supervised_inbox_ids.include?(inbox_id)
+        [store.label_inbox_key(account.id, label_id, inbox_id)]
+      else
+        [store.label_inbox_assignee_key(account.id, label_id, inbox_id, user.id)]
+      end
     when :unassigned_and_mine
       [
         store.label_inbox_unassigned_key(account.id, label_id, inbox_id),
@@ -125,6 +137,12 @@ class Conversations::UnreadCounts::Counter
     case permission_mode
     when :base
       [store.team_inbox_key(account.id, team_id, inbox_id)]
+    when :supervised_and_mine
+      if supervised_inbox_ids.include?(inbox_id)
+        [store.team_inbox_key(account.id, team_id, inbox_id)]
+      else
+        [store.team_inbox_assignee_key(account.id, team_id, inbox_id, user.id)]
+      end
     when :unassigned_and_mine
       [
         store.team_inbox_unassigned_key(account.id, team_id, inbox_id),
@@ -145,13 +163,15 @@ class Conversations::UnreadCounts::Counter
   end
 
   def assignment_mode?
-    %i[unassigned_and_mine mine].include?(permission_mode)
+    %i[supervised_and_mine unassigned_and_mine mine].include?(permission_mode)
   end
 
   def permission_mode
     @permission_mode ||=
       if full_conversation_access? || (custom_role_agent? && permissions.include?(MANAGE_ALL_PERMISSION))
         :base
+      elsif supervised_inbox_ids.any?
+        :supervised_and_mine
       elsif custom_role_agent? && permissions.include?(UNASSIGNED_PERMISSION)
         :unassigned_and_mine
       elsif !custom_role_agent? || permissions.include?(PARTICIPATING_PERMISSION)
@@ -162,7 +182,7 @@ class Conversations::UnreadCounts::Counter
   end
 
   def full_conversation_access?
-    account_user&.administrator? || account_user&.supervisor?
+    account_user&.administrator?
   end
 
   def custom_role_agent?
@@ -180,6 +200,8 @@ class Conversations::UnreadCounts::Counter
   def visible_inbox_ids
     @visible_inbox_ids ||= if full_conversation_access?
                              account.inboxes.pluck(:id)
+                           elsif supervised_inbox_ids.any?
+                             supervised_inbox_ids | assigned_or_participating_conversations.distinct.pluck(:inbox_id)
                            elsif permission_mode == :mine
                              assigned_or_participating_conversations.distinct.pluck(:inbox_id)
                            else
@@ -194,6 +216,12 @@ class Conversations::UnreadCounts::Counter
   def visible_team_ids
     @visible_team_ids ||= if full_conversation_access?
                             account.teams.pluck(:id)
+                          elsif supervised_inbox_ids.any?
+                            supervised_team_ids = account.conversations.where(inbox_id: supervised_inbox_ids)
+                                                         .where.not(team_id: nil).distinct.pluck(:team_id)
+                            assigned_team_ids = assigned_or_participating_conversations
+                                                .where.not(team_id: nil).distinct.pluck(:team_id)
+                            supervised_team_ids | assigned_team_ids
                           elsif permission_mode == :mine
                             assigned_or_participating_conversations.where.not(team_id: nil).distinct.pluck(:team_id)
                           else
@@ -207,6 +235,10 @@ class Conversations::UnreadCounts::Counter
              'conversations.assignee_id = :user_id OR conversation_participants.user_id = :user_id',
              user_id: user.id
            )
+  end
+
+  def supervised_inbox_ids
+    @supervised_inbox_ids ||= user.supervised_inboxes(account).pluck(:id)
   end
 
   def empty_counts

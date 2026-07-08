@@ -100,8 +100,8 @@ class ActionService
   end
 
   def agent_belongs_to_inbox?(agent_ids)
-    member_ids = @conversation.inbox.members.pluck(:user_id)
-    assignable_agent_ids = member_ids + @account.administrators.ids + @account.supervisors.ids
+    member_ids = @conversation.inbox.agent_inbox_members.pluck(:user_id)
+    assignable_agent_ids = member_ids + @account.administrators.ids
 
     assignable_agent_ids.include?(agent_ids[0])
   end

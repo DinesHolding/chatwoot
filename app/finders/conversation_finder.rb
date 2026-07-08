@@ -138,7 +138,7 @@ class ConversationFinder
   def mine_conversations
     return @conversations.assigned_to(current_user) if full_conversation_access?
 
-    assigned_or_participating_conversations
+    @conversations
   end
 
   def assigned_or_participating_conversations
@@ -206,7 +206,7 @@ class ConversationFinder
     return legacy_count_for_all_conversations if @conversations.limit_value || @conversations.offset_value || @conversations.eager_loading?
 
     return [
-      assigned_or_participating_conversations.count,
+      @conversations.count,
       @conversations.unassigned.count,
       @conversations.count
     ] unless full_conversation_access?
@@ -234,7 +234,7 @@ class ConversationFinder
   end
 
   def full_conversation_access?
-    account_user&.administrator? || account_user&.supervisor?
+    account_user&.administrator?
   end
 
   def current_page
@@ -243,7 +243,7 @@ class ConversationFinder
 
   def conversations_base_query
     @conversations.includes(
-      :taggings, :inbox, :conversation_participants,
+      :taggings, { inbox: :inbox_members }, :conversation_participants,
       { assignee: { avatar_attachment: [:blob] } },
       { contact: { avatar_attachment: [:blob] } }, :team, :contact_inbox
     )

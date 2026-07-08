@@ -24,6 +24,7 @@ json.meta do
     end
   end
   json.participant_ids conversation.conversation_participants.map(&:user_id)
+  json.inbox_supervisor conversation.inbox.inbox_members.any? { |member| member.user_id == Current.user&.id && member.supervisor? }
   json.hmac_verified conversation.contact_inbox&.hmac_verified
 end
 

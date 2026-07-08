@@ -24,7 +24,7 @@ class ConversationPolicy < ApplicationPolicy
   end
 
   def supervisor?
-    account_user&.supervisor?
+    record.inbox.inbox_members.supervisor.exists?(user_id: user.id)
   end
 
   def agent_bot?

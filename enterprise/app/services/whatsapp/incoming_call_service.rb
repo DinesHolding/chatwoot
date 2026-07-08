@@ -196,7 +196,7 @@ class Whatsapp::IncomingCallService
   end
 
   def fallback_agent_streams
-    user_ids = inbox.member_ids | inbox.account.administrators.ids | inbox.account.supervisors.ids
+    user_ids = inbox.member_ids | inbox.account.administrators.ids
     User.where(id: user_ids).pluck(:pubsub_token).compact
   end
 

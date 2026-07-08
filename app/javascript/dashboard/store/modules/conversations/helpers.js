@@ -81,7 +81,7 @@ export const applyRoleFilter = (
   // the backend handles this by checking the custom_role_id at the user model
   // here however, the `getUserRole` returns "custom_role" if the id is present,
   // so we can check the role === "agent" directly
-  if (['administrator', 'supervisor'].includes(role)) {
+  if (role === 'administrator') {
     return true;
   }
 
@@ -93,9 +93,12 @@ export const applyRoleFilter = (
   const isParticipant = participantIds
     .map(id => Number(id))
     .includes(Number(currentUserId));
+  const isInboxSupervisor = Boolean(
+    conversation.meta.inbox_supervisor || conversation.meta.inboxSupervisor
+  );
 
-  if (role === 'agent') {
-    return isAssignedToUser || isParticipant;
+  if (['agent', 'supervisor'].includes(role)) {
+    return isAssignedToUser || isParticipant || isInboxSupervisor;
   }
 
   // Check for full conversation management permission

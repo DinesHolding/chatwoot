@@ -64,7 +64,11 @@ class Inbox < ApplicationRecord
   has_many :contacts, through: :contact_inboxes
 
   has_many :inbox_members, dependent: :destroy_async
+  has_many :agent_inbox_members, -> { agent }, class_name: 'InboxMember', inverse_of: :inbox
+  has_many :supervisor_inbox_members, -> { supervisor }, class_name: 'InboxMember', inverse_of: :inbox
   has_many :members, through: :inbox_members, source: :user
+  has_many :agent_members, through: :agent_inbox_members, source: :user
+  has_many :supervisor_members, through: :supervisor_inbox_members, source: :user
   has_many :conversations, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async
 
@@ -87,8 +91,17 @@ class Inbox < ApplicationRecord
   # Adds multiple members to the inbox
   # @param user_ids [Array<Integer>] Array of user IDs to add as members
   # @return [void]
-  def add_members(user_ids)
-    inbox_members.create!(user_ids.map { |user_id| { user_id: user_id } })
+  def add_members(user_ids, role: :agent)
+    inbox_members.create!(user_ids.map { |user_id| { user_id: user_id, role: role } })
+    update_account_cache
+  end
+
+  def upsert_members(member_attributes)
+    member_attributes.each do |attributes|
+      inbox_member = inbox_members.find_or_initialize_by(user_id: attributes[:user_id])
+      inbox_member.role = attributes[:role]
+      inbox_member.save!
+    end
     update_account_cache
   end
 
@@ -167,7 +180,11 @@ class Inbox < ApplicationRecord
   end
 
   def assignable_agents
-    (account.users.where(id: members.select(:user_id)) + account.administrators + account.supervisors).uniq
+    (account.users.where(id: agent_inbox_members.select(:user_id)) + account.administrators).uniq
+  end
+
+  def accessible_agents
+    (account.users.where(id: inbox_members.select(:user_id)) + account.administrators).uniq
   end
 
   def active_bot?
@@ -200,7 +217,7 @@ class Inbox < ApplicationRecord
   end
 
   def member_ids_with_assignment_capacity
-    members.ids
+    agent_members.ids
   end
 
   def auto_assignment_v2_enabled?

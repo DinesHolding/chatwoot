@@ -136,7 +136,11 @@ class User < ApplicationRecord
   end
 
   def assigned_inboxes
-    administrator? || supervisor? ? Current.account.inboxes : inboxes.where(account_id: Current.account.id)
+    administrator? ? Current.account.inboxes : inboxes.where(account_id: Current.account.id)
+  end
+
+  def supervised_inboxes(account = Current.account)
+    inboxes.where(account_id: account.id).merge(InboxMember.supervisor)
   end
 
   def serializable_hash(options = nil)

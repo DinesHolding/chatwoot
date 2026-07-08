@@ -33,6 +33,13 @@ describe('Conversation Helpers', () => {
       },
     };
 
+    const conversationInSupervisedInbox = {
+      meta: {
+        assignee: null,
+        inbox_supervisor: true,
+      },
+    };
+
     // Test for administrator role
     it('always returns true for administrator role regardless of permissions', () => {
       const role = 'administrator';
@@ -65,7 +72,7 @@ describe('Conversation Helpers', () => {
       ).toBe(true);
     });
 
-    it('always returns true for supervisor role regardless of permissions', () => {
+    it('returns true for supervisor role only when assigned, participating, or supervising the inbox', () => {
       const role = 'supervisor';
       const permissions = [];
       const currentUserId = 1;
@@ -85,10 +92,18 @@ describe('Conversation Helpers', () => {
           permissions,
           currentUserId
         )
-      ).toBe(true);
+      ).toBe(false);
       expect(
         applyRoleFilter(
           conversationWithoutAssignee,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(false);
+      expect(
+        applyRoleFilter(
+          conversationInSupervisedInbox,
           role,
           permissions,
           currentUserId
@@ -129,6 +144,14 @@ describe('Conversation Helpers', () => {
       expect(
         applyRoleFilter(
           conversationWithParticipant,
+          role,
+          permissions,
+          currentUserId
+        )
+      ).toBe(true);
+      expect(
+        applyRoleFilter(
+          conversationInSupervisedInbox,
           role,
           permissions,
           currentUserId

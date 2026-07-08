@@ -33,7 +33,23 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
     end
 
     context 'when user is a supervisor' do
-      it 'returns all conversations' do
+      it 'does not return all conversations just because of the account role' do
+        result = Conversations::PermissionFilterService.new(
+          account.conversations,
+          supervisor,
+          account
+        ).perform
+
+        expect(result).not_to include(assigned_conversation)
+        expect(result).not_to include(unassigned_conversation)
+        expect(result).not_to include(another_assigned_conversation)
+        expect(result).not_to include(another_inbox_conversation)
+        expect(result.count).to eq(0)
+      end
+
+      it 'returns all conversations only in supervised inboxes' do
+        create(:inbox_member, user: supervisor, inbox: inbox, role: :supervisor)
+
         result = Conversations::PermissionFilterService.new(
           account.conversations,
           supervisor,
@@ -43,8 +59,8 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
         expect(result).to include(assigned_conversation)
         expect(result).to include(unassigned_conversation)
         expect(result).to include(another_assigned_conversation)
-        expect(result).to include(another_inbox_conversation)
-        expect(result.count).to eq(4)
+        expect(result).not_to include(another_inbox_conversation)
+        expect(result.count).to eq(3)
       end
     end
 

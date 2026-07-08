@@ -5,14 +5,14 @@ module InboxAgentAvailability
     online_agent_ids = fetch_online_agent_ids
     return inbox_members.none if online_agent_ids.empty?
 
-    inbox_members
+    inbox_members.agent
       .joins(:user)
       .where(users: { id: online_agent_ids })
       .includes(:user)
   end
 
   def member_ids_with_assignment_capacity
-    member_ids
+    agent_members.ids
   end
 
   private

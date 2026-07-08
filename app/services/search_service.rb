@@ -149,7 +149,7 @@ class SearchService
   end
 
   def should_skip_inbox_filtering?
-    account_user&.administrator? || account_user&.supervisor?
+    account_user&.administrator?
   end
 
   def visible_conversations

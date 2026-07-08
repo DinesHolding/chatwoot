@@ -51,6 +51,17 @@ describe ConversationFinder do
         expect(result[:conversations].length).to be 3
         expect(result[:count][:mine_count]).to eq 3
       end
+
+      it 'returns all conversations in inboxes supervised by the user' do
+        inbox.inbox_members.find_by(user: user_1).supervisor!
+
+        result = conversation_finder.perform
+        conversation_ids = result[:conversations].map(&:id)
+
+        expect(conversation_ids).to include(*inbox.conversations.open.pluck(:id))
+        expect(result[:conversations].length).to be 4
+        expect(result[:count][:mine_count]).to eq 4
+      end
     end
 
     context 'with inbox' do

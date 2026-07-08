@@ -307,10 +307,14 @@ function filterByAssigneeTab(conversations) {
       const assigneeId = Number(c.meta?.assignee?.id);
       const participantIds =
         c.meta?.participant_ids || c.meta?.participantIds || [];
+      const isInboxSupervisor = Boolean(
+        c.meta?.inbox_supervisor || c.meta?.inboxSupervisor
+      );
 
       return (
         assigneeId === currentUserId ||
-        participantIds.map(id => Number(id)).includes(currentUserId)
+        participantIds.map(id => Number(id)).includes(currentUserId) ||
+        isInboxSupervisor
       );
     });
   }

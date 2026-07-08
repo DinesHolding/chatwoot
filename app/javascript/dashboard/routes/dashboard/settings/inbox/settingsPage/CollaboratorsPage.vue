@@ -31,6 +31,7 @@ const { t } = useI18n();
 const { isEnterprise } = useConfig();
 
 const selectedAgentIds = ref([]);
+const selectedMemberRoles = ref({});
 const isAgentListUpdating = ref(false);
 const enableAutoAssignment = ref(false);
 const maxAssignmentLimit = ref(null);
@@ -51,6 +52,12 @@ const selectedAgentNames = computed(() =>
   )
 );
 
+const selectedAgents = computed(() =>
+  selectedAgentIds.value
+    .map(id => agentList.value.find(agent => agent.id === id))
+    .filter(Boolean)
+);
+
 const agentMenuItems = computed(() =>
   agentList.value
     .filter(({ id }) => !selectedAgentIds.value.includes(id))
@@ -65,12 +72,44 @@ const agentMenuItems = computed(() =>
 const handleAgentAdd = ({ value }) => {
   if (!selectedAgentIds.value.includes(value)) {
     selectedAgentIds.value.push(value);
+    selectedMemberRoles.value = {
+      ...selectedMemberRoles.value,
+      [value]: 'agent',
+    };
   }
 };
 
 const handleAgentRemove = index => {
-  selectedAgentIds.value.splice(index, 1);
+  const [agentId] = selectedAgentIds.value.splice(index, 1);
+  const { [agentId]: _removed, ...roles } = selectedMemberRoles.value;
+  selectedMemberRoles.value = roles;
 };
+
+const getMemberRole = agentId => selectedMemberRoles.value[agentId] || 'agent';
+
+const setMemberRole = (agentId, role) => {
+  selectedMemberRoles.value = {
+    ...selectedMemberRoles.value,
+    [agentId]: role,
+  };
+};
+
+const roleButtonClass = (agentId, role) =>
+  getMemberRole(agentId) === role
+    ? 'bg-n-background text-n-slate-12 shadow-sm'
+    : 'text-n-slate-11 hover:text-n-slate-12';
+
+const memberPayload = computed(() =>
+  selectedAgentIds.value.map(userId => ({
+    user_id: userId,
+    role: getMemberRole(userId),
+  }))
+);
+
+const roleLabel = role =>
+  role === 'supervisor'
+    ? t('AGENT_MGMT.AGENT_TYPES.SUPERVISOR')
+    : t('AGENT_MGMT.AGENT_TYPES.AGENT');
 
 const isFeatureEnabled = feature => {
   const accountId = Number(route.params.accountId);
@@ -153,6 +192,10 @@ const fetchAttachedAgents = async () => {
       data: { payload: inboxMembers },
     } = response;
     selectedAgentIds.value = inboxMembers.map(m => m.id);
+    selectedMemberRoles.value = inboxMembers.reduce((roles, member) => {
+      roles[member.id] = member.inbox_role || 'agent';
+      return roles;
+    }, {});
   } catch (error) {
     //  Handle error
   }
@@ -266,7 +309,7 @@ const updateAgents = async () => {
   try {
     await store.dispatch('inboxMembers/create', {
       inboxId: props.inbox.id,
-      agentList: selectedAgentIds.value,
+      members: memberPayload.value,
     });
     useAlert(t('AGENT_MGMT.EDIT.API.SUCCESS_MESSAGE'));
   } catch (error) {
@@ -380,6 +423,43 @@ onMounted(() => {
           @add="handleAgentAdd"
           @remove="handleAgentRemove"
         />
+        <div v-if="selectedAgents.length" class="mt-3 space-y-2">
+          <div
+            v-for="agent in selectedAgents"
+            :key="agent.id"
+            class="flex items-center justify-between gap-3 rounded-lg bg-n-slate-2 px-3 py-2"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium text-n-slate-12">
+                {{ agent.name }}
+              </p>
+              <p class="truncate text-xs text-n-slate-11">
+                {{ agent.email }}
+              </p>
+            </div>
+            <div
+              class="flex shrink-0 rounded-lg bg-n-slate-3 p-0.5 text-xs font-medium"
+              :aria-label="roleLabel(getMemberRole(agent.id))"
+            >
+              <button
+                type="button"
+                class="rounded-md px-2.5 py-1 transition-colors"
+                :class="roleButtonClass(agent.id, 'agent')"
+                @click="setMemberRole(agent.id, 'agent')"
+              >
+                {{ $t('AGENT_MGMT.AGENT_TYPES.AGENT') }}
+              </button>
+              <button
+                type="button"
+                class="rounded-md px-2.5 py-1 transition-colors"
+                :class="roleButtonClass(agent.id, 'supervisor')"
+                @click="setMemberRole(agent.id, 'supervisor')"
+              >
+                {{ $t('AGENT_MGMT.AGENT_TYPES.SUPERVISOR') }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <template #extra>

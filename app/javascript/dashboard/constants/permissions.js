@@ -8,7 +8,7 @@ export const AVAILABLE_CUSTOM_ROLE_PERMISSIONS = [
 ];
 
 export const ROLES = ['agent', 'administrator', 'supervisor'];
-export const FULL_CONVERSATION_ACCESS_ROLES = ['administrator', 'supervisor'];
+export const FULL_CONVERSATION_ACCESS_ROLES = ['administrator'];
 
 export const CONVERSATION_PERMISSIONS = [
   'conversation_manage',

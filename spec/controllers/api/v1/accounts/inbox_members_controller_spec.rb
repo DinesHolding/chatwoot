@@ -39,6 +39,7 @@ RSpec.describe 'Inbox Member API', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(response.parsed_body['payload'].pluck('id')).to eq(inbox.inbox_members.pluck(:user_id))
+        expect(response.parsed_body['payload'].first['inbox_role']).to eq('agent')
       end
     end
   end
@@ -91,6 +92,29 @@ RSpec.describe 'Inbox Member API', type: :request do
         expect(response).to have_http_status(:success)
         expect(inbox.inbox_members&.count).to eq(2)
         expect(inbox.inbox_members&.second&.user).to eq(agent_to_add)
+        expect(inbox.inbox_members&.second&.role).to eq('agent')
+      end
+
+      it 'adds inbox members with scoped roles' do
+        params = {
+          inbox_id: inbox.id,
+          members: [
+            { user_id: old_agent.id, role: 'agent' },
+            { user_id: agent_to_add.id, role: 'supervisor' }
+          ]
+        }
+
+        post "/api/v1/accounts/#{account.id}/inbox_members",
+             headers: administrator.create_new_auth_token,
+             params: params,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        created_member = inbox.inbox_members.find_by(user: agent_to_add)
+        response_member = response.parsed_body['payload'].find { |member| member['id'] == agent_to_add.id }
+
+        expect(created_member.role).to eq('supervisor')
+        expect(response_member['inbox_role']).to eq('supervisor')
       end
 
       it 'renders not found when inbox not found' do
@@ -166,6 +190,25 @@ RSpec.describe 'Inbox Member API', type: :request do
         expect(response).to have_http_status(:success)
         expect(inbox.inbox_members&.count).to eq(1)
         expect(inbox.inbox_members&.first&.user).to eq(agent_to_add)
+      end
+
+      it 'updates inbox member roles without granting account-wide supervisor access' do
+        params = {
+          inbox_id: inbox.id,
+          members: [
+            { user_id: old_agent.id, role: 'supervisor' },
+            { user_id: agent_to_add.id, role: 'agent' }
+          ]
+        }
+
+        patch "/api/v1/accounts/#{account.id}/inbox_members",
+              headers: administrator.create_new_auth_token,
+              params: params,
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(inbox.inbox_members.find_by(user: old_agent).role).to eq('supervisor')
+        expect(inbox.inbox_members.find_by(user: agent_to_add).role).to eq('agent')
       end
 
       it 'renders not found when inbox not found' do

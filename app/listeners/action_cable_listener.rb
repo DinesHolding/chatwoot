@@ -201,7 +201,7 @@ class ActionCableListener < BaseListener
 
   def user_tokens(account, agents)
     agent_tokens = agents.pluck(:pubsub_token)
-    full_access_tokens = account.administrators.pluck(:pubsub_token) + account.supervisors.pluck(:pubsub_token)
+    full_access_tokens = account.administrators.pluck(:pubsub_token)
     (agent_tokens + full_access_tokens).uniq
   end
 
