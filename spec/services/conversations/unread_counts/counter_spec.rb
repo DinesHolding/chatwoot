@@ -71,9 +71,12 @@ RSpec.describe Conversations::UnreadCounts::Counter do
     )
   end
 
-  it 'counts unread conversations across all account inboxes for supervisors' do
+  it 'counts supervised inboxes and assigned conversations for supervisors' do
+    create(:inbox_member, user: supervisor, inbox: visible_inbox, role: :supervisor)
+
     create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], team: visible_team)
     create_unread_conversation(account: account, inbox: hidden_inbox, labels: [label.title], team: visible_team)
+    create_unread_conversation(account: account, inbox: hidden_inbox, labels: [label.title], assignee: supervisor, team: visible_team)
 
     result = described_class.new(account: account, user: supervisor).perform
 

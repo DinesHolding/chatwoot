@@ -42,7 +42,15 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
 
-    context 'when user is a supervisor' do
+    context 'when user is an account supervisor only' do
+      it 'denies access' do
+        expect(subject).not_to permit(supervisor_context, conversation)
+      end
+    end
+
+    context 'when user supervises the conversation inbox' do
+      before { create(:inbox_member, user: supervisor, inbox: conversation.inbox, role: :supervisor) }
+
       it 'allows access' do
         expect(subject).to permit(supervisor_context, conversation)
       end
