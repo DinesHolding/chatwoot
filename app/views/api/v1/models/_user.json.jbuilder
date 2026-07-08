@@ -25,7 +25,14 @@ json.accounts do
     json.onboarding_step account_user.account.onboarding_step
     json.active_at account_user.active_at
     json.role account_user.role
-    json.permissions account_user.permissions
+    permissions = account_user.permissions
+    has_supervised_inboxes = InboxMember.joins(:inbox).where(
+      user_id: account_user.user_id,
+      role: :supervisor,
+      inboxes: { account_id: account_user.account_id }
+    ).exists?
+    permissions += ['conversation_supervised_manage'] if has_supervised_inboxes
+    json.permissions permissions
     # the actual availability user has configured
     json.availability account_user.availability
     # availability derived from presence

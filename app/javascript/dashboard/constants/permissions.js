@@ -18,6 +18,9 @@ export const CONVERSATION_PERMISSIONS = [
 
 export const MANAGE_ALL_CONVERSATION_PERMISSIONS = 'conversation_manage';
 
+export const CONVERSATION_SUPERVISED_PERMISSION =
+  'conversation_supervised_manage';
+
 export const CONVERSATION_UNASSIGNED_PERMISSIONS =
   'conversation_unassigned_manage';
 
@@ -40,6 +43,7 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
     permissions: [
       ...FULL_CONVERSATION_ACCESS_ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
+      CONVERSATION_SUPERVISED_PERMISSION,
       CONVERSATION_UNASSIGNED_PERMISSIONS,
     ],
   },
@@ -48,6 +52,7 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
     permissions: [
       ...FULL_CONVERSATION_ACCESS_ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
+      CONVERSATION_SUPERVISED_PERMISSION,
     ],
   },
 };

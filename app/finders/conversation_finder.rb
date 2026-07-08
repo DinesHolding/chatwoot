@@ -138,7 +138,7 @@ class ConversationFinder
   def mine_conversations
     return @conversations.assigned_to(current_user) if full_conversation_access?
 
-    @conversations
+    assigned_or_participating_conversations
   end
 
   def assigned_or_participating_conversations
@@ -205,14 +205,19 @@ class ConversationFinder
   def set_count_for_all_conversations
     return legacy_count_for_all_conversations if @conversations.limit_value || @conversations.offset_value || @conversations.eager_loading?
 
-    return [
-      @conversations.count,
-      @conversations.unassigned.count,
-      @conversations.count
-    ] unless full_conversation_access?
-
     counts = @conversations.unscope(:order).pick(
-      Arel.sql("COUNT(*) FILTER (WHERE assignee_id = #{current_user.id})"),
+      Arel.sql(
+        <<~SQL.squish
+          COUNT(*) FILTER (
+            WHERE assignee_id = #{current_user.id}
+              OR EXISTS (
+                SELECT 1 FROM conversation_participants
+                WHERE conversation_participants.conversation_id = conversations.id
+                  AND conversation_participants.user_id = #{current_user.id}
+              )
+          )
+        SQL
+      ),
       Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NULL)'),
       Arel.sql('COUNT(*)')
     )

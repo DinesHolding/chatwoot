@@ -183,6 +183,43 @@ describe('#getters', () => {
       ]);
     });
   });
+  describe('#getMineChats', () => {
+    it('returns assigned and participating chats but not supervisor-only chats', () => {
+      const conversationList = [
+        {
+          id: 1,
+          inbox_id: 2,
+          status: 'open',
+          labels: [],
+          meta: { assignee: { id: 1 } },
+        },
+        {
+          id: 2,
+          inbox_id: 2,
+          status: 'open',
+          labels: [],
+          meta: { assignee: { id: 2 }, participant_ids: [1] },
+        },
+        {
+          id: 3,
+          inbox_id: 2,
+          status: 'open',
+          labels: [],
+          meta: { assignee: { id: 2 }, inbox_supervisor: true },
+        },
+      ];
+      const rootGetters = { getCurrentUser: { id: 1 } };
+
+      expect(
+        getters.getMineChats(
+          { allConversations: conversationList },
+          {},
+          {},
+          rootGetters
+        )({ status: 'open' })
+      ).toEqual([conversationList[0], conversationList[1]]);
+    });
+  });
   describe('#getParticipatingChats', () => {
     const conversationList = [
       { id: 1, inbox_id: 2, status: 1, meta: { assignee: { id: 1 } } },
@@ -499,11 +536,7 @@ describe('#getters', () => {
         rootGetters
       );
 
-      expect(result).toEqual([
-        mockConversations[2],
-        mockConversations[1],
-        mockConversations[0],
-      ]);
+      expect(result).toEqual([mockConversations[0]]);
     });
 
     it('filters conversations for custom role with conversation_manage permission', () => {
@@ -714,11 +747,7 @@ describe('#getters', () => {
         mockRootGetters
       );
 
-      expect(result).toEqual([
-        mockConversations[0],
-        mockConversations[1],
-        mockConversations[2],
-      ]);
+      expect(result).toEqual([mockConversations[0]]);
     });
   });
 });

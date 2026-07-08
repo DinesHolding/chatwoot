@@ -52,7 +52,20 @@ describe ConversationFinder do
         expect(result[:count][:mine_count]).to eq 3
       end
 
-      it 'returns all conversations in inboxes supervised by the user' do
+      it 'does not return supervised inbox conversations under mine' do
+        inbox.inbox_members.find_by(user: user_1).supervisor!
+
+        result = conversation_finder.perform
+        conversation_ids = result[:conversations].map(&:id)
+
+        expect(conversation_ids).to match_array(inbox.conversations.open.assigned_to(user_1).pluck(:id))
+        expect(result[:conversations].length).to be 2
+        expect(result[:count][:mine_count]).to eq 2
+        expect(result[:count][:all_count]).to eq 4
+      end
+
+      it 'returns supervised inbox conversations under all' do
+        params[:assignee_type] = 'all'
         inbox.inbox_members.find_by(user: user_1).supervisor!
 
         result = conversation_finder.perform
@@ -60,7 +73,8 @@ describe ConversationFinder do
 
         expect(conversation_ids).to include(*inbox.conversations.open.pluck(:id))
         expect(result[:conversations].length).to be 4
-        expect(result[:count][:mine_count]).to eq 4
+        expect(result[:count][:mine_count]).to eq 2
+        expect(result[:count][:all_count]).to eq 4
       end
     end
 

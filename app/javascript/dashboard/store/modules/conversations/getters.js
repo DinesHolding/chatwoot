@@ -87,12 +87,8 @@ const getters = {
       const isParticipant = participantIds
         .map(id => Number(id))
         .includes(Number(currentUserID));
-      const isInboxSupervisor = Boolean(
-        conversation.meta.inbox_supervisor || conversation.meta.inboxSupervisor
-      );
       const shouldFilter = applyPageFilters(conversation, activeFilters);
-      const isChatMine =
-        (isAssignedToMe || isParticipant || isInboxSupervisor) && shouldFilter;
+      const isChatMine = (isAssignedToMe || isParticipant) && shouldFilter;
 
       return isChatMine;
     });
