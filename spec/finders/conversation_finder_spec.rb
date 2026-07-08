@@ -31,6 +31,26 @@ describe ConversationFinder do
         result = conversation_finder.perform
         expect(result[:conversations].length).to be 2
       end
+
+      it 'returns conversations where the agent is a participant' do
+        participating_conversation = create(
+          :conversation,
+          account: account,
+          inbox: inbox,
+          assignee: user_2
+        )
+        create(
+          :conversation_participant,
+          conversation: participating_conversation,
+          user: user_1
+        )
+
+        result = conversation_finder.perform
+
+        expect(result[:conversations].map(&:id)).to include(participating_conversation.id)
+        expect(result[:conversations].length).to be 3
+        expect(result[:count][:mine_count]).to eq 3
+      end
     end
 
     context 'with inbox' do

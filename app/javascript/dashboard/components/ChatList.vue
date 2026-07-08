@@ -302,9 +302,17 @@ const pageTitle = computed(() => {
 
 function filterByAssigneeTab(conversations) {
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
-    return conversations.filter(
-      c => c.meta?.assignee?.id === currentUser.value?.id
-    );
+    const currentUserId = Number(currentUser.value?.id);
+    return conversations.filter(c => {
+      const assigneeId = Number(c.meta?.assignee?.id);
+      const participantIds =
+        c.meta?.participant_ids || c.meta?.participantIds || [];
+
+      return (
+        assigneeId === currentUserId ||
+        participantIds.map(id => Number(id)).includes(currentUserId)
+      );
+    });
   }
   if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
     return conversations.filter(c => !c.meta?.assignee);

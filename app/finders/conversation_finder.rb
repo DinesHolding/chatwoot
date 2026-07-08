@@ -34,7 +34,6 @@ class ConversationFinder
   def initialize(current_user, params)
     @current_user = current_user
     @current_account = current_user.account
-    @is_admin = current_account.account_users.find_by(user_id: current_user.id)&.administrator?
     @params = params
   end
 
@@ -127,13 +126,32 @@ class ConversationFinder
   def filter_by_assignee_type
     case @assignee_type
     when 'me'
-      @conversations = @conversations.assigned_to(current_user)
+      @conversations = mine_conversations
     when 'unassigned'
       @conversations = @conversations.unassigned
     when 'assigned'
       @conversations = @conversations.assigned
     end
     @conversations
+  end
+
+  def mine_conversations
+    return @conversations.assigned_to(current_user) if full_conversation_access?
+
+    assigned_or_participating_conversations
+  end
+
+  def assigned_or_participating_conversations
+    @conversations.where(
+      <<~SQL.squish,
+        conversations.assignee_id = :user_id OR EXISTS (
+          SELECT 1 FROM conversation_participants
+          WHERE conversation_participants.conversation_id = conversations.id
+            AND conversation_participants.user_id = :user_id
+        )
+      SQL
+      user_id: current_user.id
+    ).distinct
   end
 
   def filter_by_conversation_type
@@ -187,6 +205,12 @@ class ConversationFinder
   def set_count_for_all_conversations
     return legacy_count_for_all_conversations if @conversations.limit_value || @conversations.offset_value || @conversations.eager_loading?
 
+    return [
+      assigned_or_participating_conversations.count,
+      @conversations.unassigned.count,
+      @conversations.count
+    ] unless full_conversation_access?
+
     counts = @conversations.unscope(:order).pick(
       Arel.sql("COUNT(*) FILTER (WHERE assignee_id = #{current_user.id})"),
       Arel.sql('COUNT(*) FILTER (WHERE assignee_id IS NULL)'),
@@ -197,10 +221,20 @@ class ConversationFinder
 
   def legacy_count_for_all_conversations
     [
-      @conversations.assigned_to(current_user).count,
+      mine_conversations.count,
       @conversations.unassigned.count,
       @conversations.count
     ]
+  end
+
+  def account_user
+    @account_user ||= current_account.account_users.find_by(
+      user_id: current_user.id
+    )
+  end
+
+  def full_conversation_access?
+    account_user&.administrator? || account_user&.supervisor?
   end
 
   def current_page
