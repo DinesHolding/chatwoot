@@ -2,18 +2,18 @@
 
 require 'rails_helper'
 
-RSpec.describe Conversation, 'GD commercial resolution gate' do
+RSpec.describe Conversation, '#validate_gd_commercial_resolution' do
   let(:conversation) { create(:conversation, status: :open) }
   let(:agent) { create(:user) }
 
   before { Current.user = agent }
   after { Current.user = nil }
 
-  def with_commercial_inbox(&block)
+  def with_commercial_inbox(&)
     with_modified_env(
       'GD_ODOO_COMMERCIAL_INBOX_IDS' => conversation.inbox_id.to_s,
       'GD_ODOO_COMMERCIAL_ACCOUNT_IDS' => conversation.account_id.to_s,
-      &block
+      &
     )
   end
 

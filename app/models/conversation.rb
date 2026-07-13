@@ -384,18 +384,9 @@ class Conversation < ApplicationRecord
   GD_NO_SALE_REASONS = %w[resolved_inquiry not_interested unqualified no_response duplicate].freeze
 
   def gd_commercial_resolution_by_user?
-    return false unless persisted? && will_save_change_to_status? && resolved?
-    return false unless Current.user.is_a?(User)
-
-    inbox_ids = ENV.fetch('GD_ODOO_COMMERCIAL_INBOX_IDS', '')
-                   .split(',')
-                   .filter_map { |value| Integer(value.strip, exception: false) }
-    return false unless inbox_ids.include?(inbox_id)
-
-    account_ids = ENV.fetch('GD_ODOO_COMMERCIAL_ACCOUNT_IDS', '')
-                     .split(',')
-                     .filter_map { |value| Integer(value.strip, exception: false) }
-    account_ids.empty? || account_ids.include?(account_id)
+    gd_resolution_transition_by_user? &&
+      gd_environment_ids('GD_ODOO_COMMERCIAL_INBOX_IDS').include?(inbox_id) &&
+      gd_commercial_account_enabled?
   end
 
   def stamp_gd_resolution_agent
@@ -410,20 +401,50 @@ class Conversation < ApplicationRecord
     return unless gd_commercial_resolution_by_user?
 
     attributes = custom_attributes.is_a?(Hash) ? custom_attributes : {}
-    outcome = attributes['gd_outcome']
-    unless attributes['gd_odoo_lead_id'].to_i.positive?
-      errors.add(:status, 'Para resolver una conversación comercial, vinculá primero el lead desde la pestaña Odoo.')
-    end
-    unless %w[no_sale sale].include?(outcome)
+    validate_gd_odoo_lead(attributes)
+    validate_gd_outcome(attributes)
+  end
+
+  def gd_resolution_transition_by_user?
+    persisted? && will_save_change_to_status? && resolved? && Current.user.is_a?(User)
+  end
+
+  def gd_environment_ids(name)
+    ENV.fetch(name, '').split(',').filter_map { |value| Integer(value.strip, exception: false) }
+  end
+
+  def gd_commercial_account_enabled?
+    account_ids = gd_environment_ids('GD_ODOO_COMMERCIAL_ACCOUNT_IDS')
+    account_ids.empty? || account_ids.include?(account_id)
+  end
+
+  def validate_gd_odoo_lead(attributes)
+    return if attributes['gd_odoo_lead_id'].to_i.positive?
+
+    errors.add(:status, 'Para resolver una conversación comercial, vinculá primero el lead desde la pestaña Odoo.')
+  end
+
+  def validate_gd_outcome(attributes)
+    case attributes['gd_outcome']
+    when 'no_sale'
+      validate_gd_no_sale_reason(attributes)
+    when 'sale'
+      validate_gd_sale_order(attributes)
+    else
       errors.add(:status, 'Para resolver, indicá Venta realizada o Cerrada sin venta desde la pestaña Odoo.')
-      return
     end
-    if outcome == 'no_sale' && !GD_NO_SALE_REASONS.include?(attributes['gd_outcome_reason'])
-      errors.add(:status, 'Para cerrar sin venta, seleccioná un motivo desde la pestaña Odoo.')
-    end
-    if outcome == 'sale' && !attributes['gd_odoo_sale_order_id'].to_i.positive?
-      errors.add(:status, 'La venta debe estar confirmada en Odoo antes de resolver la conversación.')
-    end
+  end
+
+  def validate_gd_no_sale_reason(attributes)
+    return unless GD_NO_SALE_REASONS.exclude?(attributes['gd_outcome_reason'])
+
+    errors.add(:status, 'Para cerrar sin venta, seleccioná un motivo desde la pestaña Odoo.')
+  end
+
+  def validate_gd_sale_order(attributes)
+    return if attributes['gd_odoo_sale_order_id'].to_i.positive?
+
+    errors.add(:status, 'La venta debe estar confirmada en Odoo antes de resolver la conversación.')
   end
 
   # creating db triggers
