@@ -67,10 +67,12 @@ class Conversation < ApplicationRecord
   validates :contact_id, presence: true
   before_validation :validate_additional_attributes
   before_validation :reset_agent_bot_when_assignee_present
+  before_validation :stamp_gd_resolution_agent
   validates :additional_attributes, jsonb_attributes_length: true
   validates :custom_attributes, jsonb_attributes_length: true
   validates :uuid, uniqueness: true
   validate :validate_referer_url
+  validate :validate_gd_commercial_resolution
 
   enum status: { open: 0, resolved: 1, pending: 2, snoozed: 3 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
@@ -377,6 +379,51 @@ class Conversation < ApplicationRecord
     return unless additional_attributes['referer']
 
     self['additional_attributes']['referer'] = nil unless url_valid?(additional_attributes['referer'])
+  end
+
+  GD_NO_SALE_REASONS = %w[resolved_inquiry not_interested unqualified no_response duplicate].freeze
+
+  def gd_commercial_resolution_by_user?
+    return false unless persisted? && will_save_change_to_status? && resolved?
+    return false unless Current.user.is_a?(User)
+
+    inbox_ids = ENV.fetch('GD_ODOO_COMMERCIAL_INBOX_IDS', '')
+                   .split(',')
+                   .filter_map { |value| Integer(value.strip, exception: false) }
+    return false unless inbox_ids.include?(inbox_id)
+
+    account_ids = ENV.fetch('GD_ODOO_COMMERCIAL_ACCOUNT_IDS', '')
+                     .split(',')
+                     .filter_map { |value| Integer(value.strip, exception: false) }
+    account_ids.empty? || account_ids.include?(account_id)
+  end
+
+  def stamp_gd_resolution_agent
+    return unless gd_commercial_resolution_by_user?
+
+    attributes = custom_attributes.is_a?(Hash) ? custom_attributes.deep_dup : {}
+    attributes['gd_resolved_by_agent_id'] ||= Current.user.id
+    self.custom_attributes = attributes
+  end
+
+  def validate_gd_commercial_resolution
+    return unless gd_commercial_resolution_by_user?
+
+    attributes = custom_attributes.is_a?(Hash) ? custom_attributes : {}
+    outcome = attributes['gd_outcome']
+    unless attributes['gd_odoo_lead_id'].to_i.positive?
+      errors.add(:status, 'Para resolver una conversación comercial, vinculá primero el lead desde la pestaña Odoo.')
+    end
+    unless %w[no_sale sale].include?(outcome)
+      errors.add(:status, 'Para resolver, indicá Venta realizada o Cerrada sin venta desde la pestaña Odoo.')
+      return
+    end
+    if outcome == 'no_sale' && !GD_NO_SALE_REASONS.include?(attributes['gd_outcome_reason'])
+      errors.add(:status, 'Para cerrar sin venta, seleccioná un motivo desde la pestaña Odoo.')
+    end
+    if outcome == 'sale' && !attributes['gd_odoo_sale_order_id'].to_i.positive?
+      errors.add(:status, 'La venta debe estar confirmada en Odoo antes de resolver la conversación.')
+    end
   end
 
   # creating db triggers

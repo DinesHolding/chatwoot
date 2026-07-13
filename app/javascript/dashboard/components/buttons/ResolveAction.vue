@@ -81,7 +81,13 @@ const openSnoozeModal = () => {
   ninja.open({ parent: 'snooze_conversation' });
 };
 
-const toggleStatus = (status, snoozedUntil, customAttributes = null) => {
+const apiErrorMessage = error =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.message ||
+  t('CONVERSATION.CHANGE_STATUS_FAILED');
+
+const toggleStatus = async (status, snoozedUntil, customAttributes = null) => {
   closeDropdown();
   isLoading.value = true;
 
@@ -95,10 +101,16 @@ const toggleStatus = (status, snoozedUntil, customAttributes = null) => {
     payload.customAttributes = customAttributes;
   }
 
-  store.dispatch('toggleStatus', payload).then(() => {
+  try {
+    await store.dispatch('toggleStatus', payload);
     useAlert(t('CONVERSATION.CHANGE_STATUS'));
+    return true;
+  } catch (error) {
+    useAlert(apiErrorMessage(error));
+    return false;
+  } finally {
     isLoading.value = false;
-  });
+  }
 };
 
 const handleResolveWithAttributes = ({ attributes, context }) => {
@@ -117,7 +129,7 @@ const onCmdOpenConversation = () => {
   toggleStatus(wootConstants.STATUS_TYPE.OPEN);
 };
 
-const onCmdResolveConversation = () => {
+const onCmdResolveConversation = async () => {
   const currentCustomAttributes = currentChat.value.custom_attributes || {};
   const { hasMissing, missing } = checkMissingAttributes(
     currentCustomAttributes
@@ -133,9 +145,9 @@ const onCmdResolveConversation = () => {
       currentCustomAttributes,
       conversationContext
     );
-  } else {
-    toggleStatus(wootConstants.STATUS_TYPE.RESOLVED);
+    return false;
   }
+  return toggleStatus(wootConstants.STATUS_TYPE.RESOLVED);
 };
 
 const keyboardEvents = {
@@ -145,13 +157,17 @@ const keyboardEvents = {
   },
   'Alt+KeyE': {
     action: async () => {
-      onCmdResolveConversation();
+      await onCmdResolveConversation();
     },
   },
   '$mod+Alt+KeyE': {
     action: async event => {
       const { all, activeIndex, lastIndex } = getConversationParams();
-      onCmdResolveConversation();
+      const changed = await onCmdResolveConversation();
+      if (!changed) {
+        event.preventDefault();
+        return;
+      }
 
       if (activeIndex < lastIndex) {
         all[activeIndex + 1].click();
