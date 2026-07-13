@@ -180,7 +180,7 @@ class Inbox < ApplicationRecord
   end
 
   def assignable_agents
-    (account.users.where(id: agent_inbox_members.select(:user_id)) + account.administrators).uniq
+    accessible_agents
   end
 
   def accessible_agents

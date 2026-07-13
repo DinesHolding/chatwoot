@@ -224,6 +224,7 @@ RSpec.describe 'Inboxes API', type: :request do
 
   describe 'GET /api/v1/accounts/{account.id}/inboxes/{inbox.id}/assignable_agents' do
     let(:inbox) { create(:inbox, account: account) }
+    let(:supervisor) { create(:user, account: account, role: :agent) }
 
     context 'when it is an unauthenticated user' do
       it 'returns unauthorized' do
@@ -236,6 +237,7 @@ RSpec.describe 'Inboxes API', type: :request do
     context 'when it is an authenticated user' do
       before do
         create(:inbox_member, user: agent, inbox: inbox)
+        create(:inbox_member, user: supervisor, inbox: inbox, role: :supervisor)
       end
 
       it 'returns all assignable inbox members along with administrators' do
@@ -245,8 +247,7 @@ RSpec.describe 'Inboxes API', type: :request do
 
         expect(response).to have_http_status(:success)
         response_data = JSON.parse(response.body, symbolize_names: true)[:payload]
-        expect(response_data.size).to eq(2)
-        expect(response_data.pluck(:role)).to include('agent', 'administrator')
+        expect(response_data.pluck(:id)).to contain_exactly(agent.id, admin.id, supervisor.id)
       end
     end
   end

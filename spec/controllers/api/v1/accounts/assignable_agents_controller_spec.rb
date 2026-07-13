@@ -5,6 +5,7 @@ RSpec.describe 'Assignable Agents API', type: :request do
   let(:agent1) { create(:user, account: account, role: :agent) }
   let!(:agent2) { create(:user, account: account, role: :agent) }
   let!(:admin) { create(:user, account: account, role: :administrator) }
+  let!(:supervisor) { create(:user, account: account, role: :agent) }
 
   describe 'GET /api/v1/accounts/{account.id}/assignable_agents' do
     let(:inbox1) { create(:inbox, account: account) }
@@ -13,6 +14,8 @@ RSpec.describe 'Assignable Agents API', type: :request do
     before do
       create(:inbox_member, user: agent1, inbox: inbox1)
       create(:inbox_member, user: agent1, inbox: inbox2)
+      create(:inbox_member, user: supervisor, inbox: inbox1, role: :supervisor)
+      create(:inbox_member, user: supervisor, inbox: inbox2, role: :supervisor)
     end
 
     context 'when it is an unauthenticated user' do
@@ -33,8 +36,7 @@ RSpec.describe 'Assignable Agents API', type: :request do
 
           expect(response).to have_http_status(:success)
           response_data = JSON.parse(response.body, symbolize_names: true)[:payload]
-          expect(response_data.size).to eq(2)
-          expect(response_data.pluck(:role)).to include('agent', 'administrator')
+          expect(response_data.pluck(:id)).to contain_exactly(agent1.id, admin.id, supervisor.id)
         end
       end
 
@@ -59,8 +61,7 @@ RSpec.describe 'Assignable Agents API', type: :request do
 
         expect(response).to have_http_status(:success)
         response_data = JSON.parse(response.body, symbolize_names: true)[:payload]
-        expect(response_data.size).to eq(2)
-        expect(response_data.pluck(:role)).to include('agent', 'administrator')
+        expect(response_data.pluck(:id)).to contain_exactly(agent1.id, admin.id, supervisor.id)
       end
     end
   end
