@@ -37,22 +37,26 @@ const ok = data => ({ content: [{ type: 'text', text: JSON.stringify(data, null,
 const fail = e => ({ isError: true, content: [{ type: 'text', text: String(e.message || e) }] });
 const ts = s => (s ? new Date(s * 1000).toISOString() : null);
 
-const conversationSummary = c => ({
-  id: c.id,
-  status: c.status,
-  inbox_id: c.inbox_id,
-  contact: c.meta?.sender && {
-    id: c.meta.sender.id,
-    name: c.meta.sender.name,
-    email: c.meta.sender.email,
-    phone: c.meta.sender.phone_number,
-  },
-  assignee: c.meta?.assignee?.name || null,
-  labels: c.labels,
-  unread_count: c.unread_count,
-  last_activity_at: ts(c.last_activity_at),
-  last_message: c.messages?.[0]?.content?.slice(0, 200) || null,
-});
+// The list/show endpoints use meta.sender + inbox_id; the search endpoint uses contact + inbox.
+const conversationSummary = c => {
+  const contact = c.meta?.sender || c.contact;
+  return {
+    id: c.id,
+    status: c.status,
+    inbox_id: c.inbox_id ?? c.inbox?.id,
+    contact: contact && {
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone_number,
+    },
+    assignee: c.meta?.assignee?.name || null,
+    labels: c.labels,
+    unread_count: c.unread_count,
+    last_activity_at: ts(c.last_activity_at),
+    last_message: c.messages?.at(-1)?.content?.slice(0, 200) || null,
+  };
+};
 
 const messageSummary = m => ({
   id: m.id,
@@ -101,7 +105,8 @@ server.registerTool(
       const query = { status, assignee_type: assignee_type || 'all', inbox_id, q, page };
       const path = q ? '/conversations/search' : '/conversations';
       const url = labels?.length ? `${path}?${labels.map(l => `labels[]=${encodeURIComponent(l)}`).join('&')}` : path;
-      const { data } = await api(url, { query });
+      const res = await api(url, { query });
+      const data = res.data || res;
       return ok({ counts: data.meta, conversations: data.payload.map(conversationSummary) });
     } catch (e) {
       return fail(e);
