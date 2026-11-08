@@ -89,9 +89,14 @@ server.registerTool(
 server.registerTool(
   'chatwoot_list_conversations',
   {
-    description: 'List conversations (25 per page), most recent activity first. Use q to search message text.',
+    description:
+      'List conversations (25 per page), most recent activity first. Use q to search message text; ' +
+      'a search spans all statuses and ignores the status filter.',
     inputSchema: {
-      status: z.enum(['open', 'resolved', 'pending', 'snoozed', 'all']).optional().describe('Default: open'),
+      status: z
+        .enum(['open', 'resolved', 'pending', 'snoozed', 'all'])
+        .optional()
+        .describe('Default: open. Ignored when q is set'),
       assignee_type: z.enum(['me', 'unassigned', 'all', 'assigned']).optional().describe('Default: all'),
       inbox_id: z.number().int().optional(),
       labels: z.array(z.string()).optional(),
