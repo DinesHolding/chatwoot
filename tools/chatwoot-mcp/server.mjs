@@ -211,7 +211,12 @@ if (MCP_TRANSPORT === 'http') {
   };
 
   createServer(async (req, res) => {
-    const { pathname } = new URL(req.url, 'http://localhost');
+    let pathname;
+    try {
+      ({ pathname } = new URL(req.url, 'http://localhost'));
+    } catch {
+      return res.writeHead(400).end();
+    }
     if (pathname === '/health') return res.writeHead(200).end('ok');
 
     // Claude Code sends the secret as a Bearer header; ChatGPT (no-auth connector) carries it in the URL.
