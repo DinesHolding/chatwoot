@@ -224,7 +224,10 @@ function buildServer() {
         snoozed_until: z
           .string()
           .optional()
-          .describe('ISO 8601 date-time, only for snoozed. Omit to snooze until the next customer reply'),
+          .describe(
+            'ISO 8601 date-time, only for snoozed. If omitted, it snoozes until the next customer reply, ' +
+              'but a conversation already snoozed with a date keeps that date'
+          ),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
