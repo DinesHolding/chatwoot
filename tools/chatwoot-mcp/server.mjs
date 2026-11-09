@@ -323,13 +323,13 @@ function buildServer() {
     {
       description:
         'Search contacts by name, email, phone or identifier. Use it before creating a contact to avoid duplicates.',
-      inputSchema: { q: z.string().min(1) },
+      inputSchema: { q: z.string().min(1), page: z.number().int().min(1).optional().describe('15 results per page') },
       annotations: { readOnlyHint: true },
     },
-    async ({ q }) => {
+    async ({ q, page }) => {
       try {
-        const { payload } = await api('/contacts/search', { query: { q } });
-        return ok(payload.map(contactSummary));
+        const { meta, payload } = await api('/contacts/search', { query: { q, page } });
+        return ok({ has_more: meta?.has_more ?? false, contacts: payload.map(contactSummary) });
       } catch (e) {
         return fail(e);
       }
