@@ -54,6 +54,8 @@ const conversationSummary = c => {
       phone: contact.phone_number,
     },
     assignee: c.meta?.assignee?.name || null,
+    team: c.meta?.team?.name || null,
+    priority: c.priority ?? null,
     labels: c.labels,
     unread_count: c.unread_count,
     last_activity_at: ts(c.last_activity_at),
@@ -72,7 +74,7 @@ const messageSummary = m => ({
 });
 
 function buildServer() {
-  const server = new McpServer({ name: 'chatwoot', version: '0.2.0' });
+  const server = new McpServer({ name: 'chatwoot', version: '0.3.0' });
 
   server.registerTool(
     'chatwoot_list_inboxes',
@@ -164,6 +166,147 @@ function buildServer() {
           body: { content, message_type: 'outgoing', private: true },
         });
         return ok({ created: messageSummary(m) });
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_list_agents',
+    {
+      description: 'List the agents of the account (use their id to assign conversations).',
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      try {
+        const agents = await api('/agents');
+        return ok(
+          agents.map(a => ({
+            id: a.id,
+            name: a.name,
+            email: a.email,
+            role: a.role,
+            availability: a.availability_status,
+          }))
+        );
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_list_teams',
+    {
+      description: 'List the teams of the account (use their id to assign conversations).',
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      try {
+        const teams = await api('/teams');
+        return ok(teams.map(t => ({ id: t.id, name: t.name })));
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_set_status',
+    {
+      description:
+        'Change a conversation status: resolve it, mark it pending, snooze it or reopen it. ' +
+        'The customer is not messaged, although the inbox may send its own automatic replies (e.g. CSAT on resolve).',
+      inputSchema: {
+        conversation_id: z.number().int(),
+        status: z.enum(['open', 'resolved', 'pending', 'snoozed']),
+        snoozed_until: z
+          .string()
+          .optional()
+          .describe('ISO 8601 date-time, only for snoozed. Omit to snooze until the next customer reply'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ conversation_id, status, snoozed_until }) => {
+      try {
+        const body = { status };
+        if (status === 'snoozed' && snoozed_until) {
+          const t = Date.parse(snoozed_until);
+          if (Number.isNaN(t)) throw new Error(`Invalid snoozed_until: ${snoozed_until}`);
+          body.snoozed_until = Math.floor(t / 1000);
+        }
+        const r = await api(`/conversations/${conversation_id}/toggle_status`, { method: 'POST', body });
+        return ok(r.payload || r);
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_assign',
+    {
+      description:
+        'Assign a conversation to an agent and/or a team. Pass null to unassign. Get ids from chatwoot_list_agents / chatwoot_list_teams.',
+      inputSchema: {
+        conversation_id: z.number().int(),
+        assignee_id: z.number().int().nullable().optional().describe('Agent id, or null to remove the agent'),
+        team_id: z.number().int().nullable().optional().describe('Team id, or null to remove the team'),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ conversation_id, assignee_id, team_id }) => {
+      try {
+        if (assignee_id === undefined && team_id === undefined) throw new Error('Pass assignee_id and/or team_id');
+        const path = `/conversations/${conversation_id}/assignments`;
+        const result = {};
+        // Chatwoot assigns either an agent or a team per request. Team goes first: changing the team can clear
+        // or auto-pick the agent, and an explicit agent should win.
+        if (team_id !== undefined) result.team = await api(path, { method: 'POST', body: { team_id } });
+        if (assignee_id !== undefined) result.assignee = await api(path, { method: 'POST', body: { assignee_id } });
+        return ok({
+          team: result.team === undefined ? undefined : result.team?.name || null,
+          assignee: result.assignee === undefined ? undefined : result.assignee?.name || null,
+        });
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_set_labels',
+    {
+      description:
+        'Replace the labels of a conversation with the given list (pass the current ones too to keep them; [] removes all).',
+      inputSchema: { conversation_id: z.number().int(), labels: z.array(z.string()) },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ conversation_id, labels }) => {
+      try {
+        const r = await api(`/conversations/${conversation_id}/labels`, { method: 'POST', body: { labels } });
+        return ok({ labels: r.payload });
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_set_priority',
+    {
+      description: 'Set the priority of a conversation, or null to clear it.',
+      inputSchema: {
+        conversation_id: z.number().int(),
+        priority: z.enum(['urgent', 'high', 'medium', 'low']).nullable(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    },
+    async ({ conversation_id, priority }) => {
+      try {
+        await api(`/conversations/${conversation_id}/toggle_priority`, { method: 'POST', body: { priority } });
+        return ok({ priority });
       } catch (e) {
         return fail(e);
       }

@@ -10,9 +10,16 @@ Servidor MCP mínimo para conectar Claude Code, Claude (web/desktop) o ChatGPT a
 | `chatwoot_list_conversations` | Lista conversaciones por estado, asignación, bandeja, etiquetas o texto (`q`) | No |
 | `chatwoot_get_conversation` | Trae una conversación con sus últimos 20 mensajes (paginable con `before_message_id`) | No |
 | `chatwoot_add_private_note` | Agrega una nota privada interna | No |
+| `chatwoot_list_agents` / `chatwoot_list_teams` | Lista agentes y equipos (para obtener sus id) | No |
+| `chatwoot_set_status` | Resuelve, deja pendiente, pospone (`snoozed_until` opcional) o reabre | No* |
+| `chatwoot_assign` | Asigna o quita agente y/o equipo | No |
+| `chatwoot_set_labels` | Reemplaza las etiquetas de la conversación | No |
+| `chatwoot_set_priority` | Cambia o quita la prioridad | No |
 | `chatwoot_send_reply` | Envía una respuesta al cliente por su canal | **Sí** |
 
-`chatwoot_send_reply` solo existe si se define `CHATWOOT_ALLOW_SEND=true`. Por defecto el servidor no puede escribirle a ningún cliente.
+\* Al resolver, la bandeja puede mandar sus mensajes automáticos (por ejemplo la encuesta de satisfacción) si están configurados.
+
+`chatwoot_send_reply` solo existe si se define `CHATWOOT_ALLOW_SEND=true` (exactamente `true`). Por defecto el servidor no puede escribirle a ningún cliente.
 
 ## Uso remoto (recomendado)
 
