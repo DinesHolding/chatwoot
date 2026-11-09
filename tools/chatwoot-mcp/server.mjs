@@ -74,7 +74,7 @@ const messageSummary = m => ({
 });
 
 function buildServer() {
-  const server = new McpServer({ name: 'chatwoot', version: '0.3.0' });
+  const server = new McpServer({ name: 'chatwoot', version: '0.4.0' });
 
   server.registerTool(
     'chatwoot_list_inboxes',
@@ -310,6 +310,90 @@ function buildServer() {
       try {
         await api(`/conversations/${conversation_id}/toggle_priority`, { method: 'POST', body: { priority } });
         return ok({ priority });
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  const contactSummary = c => ({ id: c.id, name: c.name, email: c.email, phone: c.phone_number });
+
+  server.registerTool(
+    'chatwoot_search_contacts',
+    {
+      description:
+        'Search contacts by name, email, phone or identifier. Use it before creating a contact to avoid duplicates.',
+      inputSchema: { q: z.string().min(1) },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ q }) => {
+      try {
+        const { payload } = await api('/contacts/search', { query: { q } });
+        return ok(payload.map(contactSummary));
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_create_contact',
+    {
+      description:
+        'Create a contact. Search first to avoid duplicates. For email inboxes the contact needs an email; for WhatsApp, a phone in E.164 (+5491112345678).',
+      inputSchema: {
+        name: z.string().min(1),
+        email: z.string().email().optional(),
+        phone_number: z.string().optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ name, email, phone_number }) => {
+      try {
+        const { payload } = await api('/contacts', { method: 'POST', body: { name, email, phone_number } });
+        return ok(contactSummary(payload.contact));
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_create_conversation',
+    {
+      description:
+        'Open a new conversation for an existing contact in an inbox, without writing to the customer. ' +
+        'Optionally record the message the customer sent (e.g. an email received elsewhere) as an incoming message: ' +
+        'it is stored as written by the contact and is NOT sent, though inbox automations or bots may react to it. ' +
+        'To write to the customer afterwards use chatwoot_send_reply.',
+      inputSchema: {
+        inbox_id: z.number().int(),
+        contact_id: z.number().int(),
+        incoming_message: z
+          .string()
+          .optional()
+          .describe('Text the customer sent, recorded as incoming. Include the original date in the text if relevant'),
+        status: z.enum(['open', 'pending', 'resolved']).optional().describe('Default: open'),
+        assignee_id: z.number().int().optional(),
+        team_id: z.number().int().optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ inbox_id, contact_id, incoming_message, status, assignee_id, team_id }) => {
+      try {
+        const c = await api('/conversations', {
+          method: 'POST',
+          body: { inbox_id, contact_id, status, assignee_id, team_id },
+        });
+        const result = { conversation: conversationSummary(c) };
+        if (incoming_message) {
+          const m = await api(`/conversations/${c.id}/messages`, {
+            method: 'POST',
+            body: { content: incoming_message, message_type: 'incoming', private: false },
+          });
+          result.recorded_message = messageSummary(m);
+        }
+        return ok(result);
       } catch (e) {
         return fail(e);
       }
