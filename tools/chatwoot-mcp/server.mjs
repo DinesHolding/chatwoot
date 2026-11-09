@@ -363,35 +363,34 @@ function buildServer() {
     {
       description:
         'Open a new conversation for an existing contact in an inbox, without writing to the customer. ' +
-        'Optionally record the message the customer sent (e.g. an email received elsewhere) as an incoming message: ' +
-        'it is stored as written by the contact and is NOT sent, though inbox automations or bots may react to it. ' +
-        'To write to the customer afterwards use chatwoot_send_reply.',
+        'Optionally store the message the customer sent elsewhere (e.g. an email) as a private note, visible only to agents ' +
+        '(Chatwoot only accepts customer-authored messages on API inboxes). To write to the customer use chatwoot_send_reply.',
       inputSchema: {
         inbox_id: z.number().int(),
         contact_id: z.number().int(),
-        incoming_message: z
+        original_message: z
           .string()
           .optional()
-          .describe('Text the customer sent, recorded as incoming. Include the original date in the text if relevant'),
+          .describe('What the customer sent, stored as a private note. Include sender, date and subject if relevant'),
         status: z.enum(['open', 'pending', 'resolved']).optional().describe('Default: open'),
         assignee_id: z.number().int().optional(),
         team_id: z.number().int().optional(),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
-    async ({ inbox_id, contact_id, incoming_message, status, assignee_id, team_id }) => {
+    async ({ inbox_id, contact_id, original_message, status, assignee_id, team_id }) => {
       try {
         const c = await api('/conversations', {
           method: 'POST',
           body: { inbox_id, contact_id, status, assignee_id, team_id },
         });
         const result = { conversation: conversationSummary(c) };
-        if (incoming_message) {
+        if (original_message) {
           const m = await api(`/conversations/${c.id}/messages`, {
             method: 'POST',
-            body: { content: incoming_message, message_type: 'incoming', private: false },
+            body: { content: original_message, message_type: 'outgoing', private: true },
           });
-          result.recorded_message = messageSummary(m);
+          result.note = messageSummary(m);
         }
         return ok(result);
       } catch (e) {
