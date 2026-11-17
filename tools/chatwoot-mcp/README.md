@@ -27,7 +27,7 @@ Servidor MCP mínimo para conectar Claude Code, Claude (web/desktop) o ChatGPT a
 `chatwoot_get_conversation` lista los adjuntos de cada mensaje con su `id`, nombre y tamaño. `chatwoot_get_attachment` (con `conversation_id`, `message_id` y opcionalmente `attachment_id`) los descarga del lado del servidor, así se pueden leer aunque el cliente no tenga acceso a `crm.grupodines.com`:
 
 - Imágenes: se devuelven como imagen. Las de más de 1600 px o más de 1 MB se achican y pasan a JPEG.
-- PDF: se devuelve el texto de cada página. Si el PDF es escaneado (sin texto), se devuelven las primeras 5 páginas como imágenes. Con `pdf_as_images: true` se agregan las imágenes aunque tenga texto (útil para sellos, firmas o tablas).
+- PDF: se devuelve el texto de cada página, armado por renglón y con las columnas separadas por `|` para que las tablas (cantidad, descripción, precio) no se mezclen. Si el PDF es escaneado (sin texto), se devuelven las primeras 5 páginas como imágenes. Con `pdf_as_images: true` se agregan las imágenes aunque tenga texto (útil para sellos, firmas o tablas).
 - Texto (txt, csv, json, xml): se devuelve el texto.
 - Otros formatos (audio, video, Word, Excel): solo los datos del archivo.
 

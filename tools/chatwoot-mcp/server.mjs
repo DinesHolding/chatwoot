@@ -8,7 +8,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
-import { extractText, getDocumentProxy, renderPageAsImage } from 'unpdf';
+import { extractTextItems, getDocumentProxy, renderPageAsImage } from 'unpdf';
 
 const { CHATWOOT_URL, CHATWOOT_API_TOKEN, CHATWOOT_ACCOUNT_ID, CHATWOOT_ALLOW_SEND } = process.env;
 
@@ -88,9 +88,35 @@ async function imageContent(bytes, mimeType) {
   return { type: 'image', data: (await canvas.encode('jpeg', 85)).toString('base64'), mimeType: 'image/jpeg' };
 }
 
+// Rebuild each visual line from item positions so table rows keep their columns (description next to its price).
+const pageLines = items => {
+  const rows = [];
+  items
+    .filter(i => i.str.trim())
+    .sort((a, b) => b.y - a.y || a.x - b.x)
+    .forEach(i => {
+      const row = rows.find(r => Math.abs(r.y - i.y) <= Math.max(2, i.fontSize * 0.4));
+      if (row) row.items.push(i);
+      else rows.push({ y: i.y, items: [i] });
+    });
+  return rows
+    .map(r =>
+      r.items
+        .sort((a, b) => a.x - b.x)
+        .reduce((line, i, n, all) => {
+          if (n === 0) return i.str;
+          const prev = all[n - 1];
+          const gap = i.x - (prev.x + prev.width);
+          return line + (gap > i.fontSize ? ' | ' : gap > 0.5 ? ' ' : '') + i.str;
+        }, '')
+    )
+    .join('\n');
+};
+
 async function pdfContent(bytes, asImages) {
   const pdf = await getDocumentProxy(new Uint8Array(bytes));
-  const { totalPages, text } = await extractText(pdf, { mergePages: false });
+  const { totalPages, items } = await extractTextItems(pdf);
+  const text = items.map(pageLines);
   const pages = text.map((t, i) => `--- Page ${i + 1} ---\n${t.trim()}`).join('\n\n');
   const hasText = text.join('').trim().length > 0;
   const content = [];
