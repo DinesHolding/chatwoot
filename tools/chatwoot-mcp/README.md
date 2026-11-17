@@ -9,6 +9,7 @@ Servidor MCP mínimo para conectar Claude Code, Claude (web/desktop) o ChatGPT a
 | `chatwoot_list_inboxes` | Lista las bandejas (canales) | No |
 | `chatwoot_list_conversations` | Lista conversaciones por estado, asignación, bandeja, etiquetas o texto (`q`) | No |
 | `chatwoot_get_conversation` | Trae una conversación con sus últimos 20 mensajes (paginable con `before_message_id`) | No |
+| `chatwoot_get_attachment` | Descarga un adjunto desde el servidor y devuelve su contenido (ver abajo) | No |
 | `chatwoot_add_private_note` | Agrega una nota privada interna | No |
 | `chatwoot_list_agents` / `chatwoot_list_teams` | Lista agentes y equipos (para obtener sus id) | No |
 | `chatwoot_set_status` | Resuelve, deja pendiente, pospone (`snoozed_until` opcional) o reabre | No* |
@@ -20,6 +21,17 @@ Servidor MCP mínimo para conectar Claude Code, Claude (web/desktop) o ChatGPT a
 | `chatwoot_send_reply` | Envía una respuesta al cliente por su canal | **Sí** |
 
 \* Al resolver, las automatizaciones o bots de la bandeja pueden reaccionar (por ejemplo la encuesta de satisfacción o una respuesta automática) si están configurados.
+
+### Adjuntos
+
+`chatwoot_get_conversation` lista los adjuntos de cada mensaje con su `id`, nombre y tamaño. `chatwoot_get_attachment` (con `conversation_id`, `message_id` y opcionalmente `attachment_id`) los descarga del lado del servidor, así se pueden leer aunque el cliente no tenga acceso a `crm.grupodines.com`:
+
+- Imágenes: se devuelven como imagen. Las de más de 1600 px o más de 1 MB se achican y pasan a JPEG.
+- PDF: se devuelve el texto de cada página. Si el PDF es escaneado (sin texto), se devuelven las primeras 5 páginas como imágenes. Con `pdf_as_images: true` se agregan las imágenes aunque tenga texto (útil para sellos, firmas o tablas).
+- Texto (txt, csv, json, xml): se devuelve el texto.
+- Otros formatos (audio, video, Word, Excel): solo los datos del archivo.
+
+Límite: 20 MB por adjunto. Solo se descargan archivos alojados en el mismo dominio que `CHATWOOT_URL`, y la URL sale de la API de Chatwoot, nunca del pedido.
 
 `chatwoot_send_reply` solo existe si se define `CHATWOOT_ALLOW_SEND=true` (exactamente `true`). Por defecto el servidor no puede escribirle a ningún cliente.
 

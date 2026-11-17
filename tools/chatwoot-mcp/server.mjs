@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
+import { extractText, getDocumentProxy, renderPageAsImage } from 'unpdf';
 
 const { CHATWOOT_URL, CHATWOOT_API_TOKEN, CHATWOOT_ACCOUNT_ID, CHATWOOT_ALLOW_SEND } = process.env;
 
@@ -40,6 +41,76 @@ const ok = data => ({ content: [{ type: 'text', text: JSON.stringify(data, null,
 const fail = e => ({ isError: true, content: [{ type: 'text', text: String(e.message || e) }] });
 const ts = s => (s ? new Date(s * 1000).toISOString() : null);
 
+const attachmentName = a => {
+  try {
+    return decodeURIComponent(new URL(a.data_url).pathname.split('/').pop());
+  } catch {
+    return null;
+  }
+};
+
+// Attachments are downloaded server-side so clients that cannot reach the Chatwoot domain can still read them.
+// Only URLs on the Chatwoot host are fetched (they come from the Chatwoot API, never from the caller).
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const MAX_TEXT_CHARS = 100000;
+const MAX_IMAGE_SIDE = 1600;
+const MAX_PDF_IMAGE_PAGES = 5;
+const CHATWOOT_HOST = new URL(CHATWOOT_URL).host;
+const canvasImport = () => import('@napi-rs/canvas');
+
+async function download(dataUrl) {
+  const url = new URL(dataUrl);
+  if (url.host !== CHATWOOT_HOST) throw new Error(`Attachment is not hosted on ${CHATWOOT_HOST}: ${url.host}`);
+  const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  if (Number(res.headers.get('content-length')) > MAX_ATTACHMENT_BYTES) throw new Error('Attachment larger than 20 MB');
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of res.body) {
+    size += chunk.length;
+    if (size > MAX_ATTACHMENT_BYTES) throw new Error('Attachment larger than 20 MB');
+    chunks.push(chunk);
+  }
+  return { bytes: Buffer.concat(chunks), mimeType: (res.headers.get('content-type') || '').split(';')[0].trim() };
+}
+
+// Scale big photos down and re-encode as JPEG so they fit the model's image limits without wasting context.
+async function imageContent(bytes, mimeType) {
+  const { loadImage, createCanvas } = await canvasImport();
+  const img = await loadImage(bytes);
+  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(img.width, img.height));
+  const passthrough = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mimeType);
+  if (scale === 1 && passthrough && bytes.length <= 1024 * 1024) {
+    return { type: 'image', data: bytes.toString('base64'), mimeType };
+  }
+  const canvas = createCanvas(Math.round(img.width * scale), Math.round(img.height * scale));
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+  return { type: 'image', data: (await canvas.encode('jpeg', 85)).toString('base64'), mimeType: 'image/jpeg' };
+}
+
+async function pdfContent(bytes, asImages) {
+  const pdf = await getDocumentProxy(new Uint8Array(bytes));
+  const { totalPages, text } = await extractText(pdf, { mergePages: false });
+  const pages = text.map((t, i) => `--- Page ${i + 1} ---\n${t.trim()}`).join('\n\n');
+  const hasText = text.join('').trim().length > 0;
+  const content = [];
+  if (hasText) content.push({ type: 'text', text: pages.slice(0, MAX_TEXT_CHARS) });
+  // Scanned receipts have no text layer: send the pages as images instead.
+  if (asImages || !hasText) {
+    const count = Math.min(totalPages, MAX_PDF_IMAGE_PAGES);
+    for (let n = 1; n <= count; n += 1) {
+      const page = await pdf.getPage(n);
+      const { width, height } = page.getViewport({ scale: 1 });
+      const scale = Math.min(2, MAX_IMAGE_SIDE / Math.max(width, height));
+      const png = await renderPageAsImage(pdf, n, { canvasImport, scale });
+      content.push(await imageContent(Buffer.from(png), 'image/png'));
+    }
+  }
+  return { totalPages, hasText, content };
+}
+
+const TEXT_MIME = /^(text\/|application\/(json|xml|csv))/;
+
 // The list/show endpoints use meta.sender + inbox_id; the search endpoint uses contact + inbox.
 const conversationSummary = c => {
   const contact = c.meta?.sender || c.contact;
@@ -70,11 +141,17 @@ const messageSummary = m => ({
   sender: m.sender?.name || null,
   created_at: ts(m.created_at),
   content: m.content,
-  attachments: (m.attachments || []).map(a => ({ type: a.file_type, url: a.data_url })),
+  attachments: (m.attachments || []).map(a => ({
+    id: a.id,
+    type: a.file_type,
+    name: attachmentName(a),
+    size: a.file_size,
+    url: a.data_url,
+  })),
 });
 
 function buildServer() {
-  const server = new McpServer({ name: 'chatwoot', version: '0.4.0' });
+  const server = new McpServer({ name: 'chatwoot', version: '0.5.0' });
 
   server.registerTool(
     'chatwoot_list_inboxes',
@@ -146,6 +223,62 @@ function buildServer() {
           conversation: conversationSummary(conversation),
           messages: messages.payload.map(messageSummary),
         });
+      } catch (e) {
+        return fail(e);
+      }
+    }
+  );
+
+  server.registerTool(
+    'chatwoot_get_attachment',
+    {
+      description:
+        'Download an attachment of a message and return its content: images as images, PDFs as extracted text ' +
+        '(scanned PDFs without text come back as page images), and text files (txt, csv, json, xml) as text. ' +
+        'Get message_id and attachment_id from chatwoot_get_conversation. Max 20 MB.',
+      inputSchema: {
+        conversation_id: z.number().int(),
+        message_id: z.number().int(),
+        attachment_id: z
+          .number()
+          .int()
+          .optional()
+          .describe('Default: the first attachment of the message'),
+        pdf_as_images: z
+          .boolean()
+          .optional()
+          .describe(`Also render PDF pages as images (first ${MAX_PDF_IMAGE_PAGES}), useful when layout or stamps matter`),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ conversation_id, message_id, attachment_id, pdf_as_images }) => {
+      try {
+        // "before" is exclusive, so before=id+1 returns the page that ends with the requested message.
+        const { payload } = await api(`/conversations/${conversation_id}/messages`, {
+          query: { before: message_id + 1 },
+        });
+        const message = payload.find(m => m.id === message_id);
+        if (!message) throw new Error(`Message ${message_id} not found in conversation ${conversation_id}`);
+        const attachments = message.attachments || [];
+        const a = attachment_id ? attachments.find(x => x.id === attachment_id) : attachments[0];
+        if (!a) throw new Error(`Attachment not found. Message attachments: ${attachments.map(x => x.id).join(', ') || 'none'}`);
+
+        const { bytes, mimeType } = await download(a.data_url);
+        const info = { id: a.id, name: attachmentName(a), type: a.file_type, mime_type: mimeType, size: bytes.length };
+        const isPdf = mimeType === 'application/pdf' || bytes.subarray(0, 5).toString() === '%PDF-';
+
+        if (isPdf) {
+          const { totalPages, hasText, content } = await pdfContent(bytes, pdf_as_images);
+          const note = hasText ? {} : { note: 'The PDF has no text layer (scanned); pages are returned as images' };
+          return { content: [{ type: 'text', text: JSON.stringify({ ...info, pages: totalPages, ...note }) }, ...content] };
+        }
+        if (mimeType.startsWith('image/')) {
+          return { content: [{ type: 'text', text: JSON.stringify(info) }, await imageContent(bytes, mimeType)] };
+        }
+        if (TEXT_MIME.test(mimeType)) {
+          return ok({ ...info, text: bytes.toString('utf8').slice(0, MAX_TEXT_CHARS) });
+        }
+        return ok({ ...info, note: `Content type ${mimeType || 'unknown'} cannot be read by this tool` });
       } catch (e) {
         return fail(e);
       }

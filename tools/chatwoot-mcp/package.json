@@ -4,10 +4,16 @@
   "private": true,
   "description": "Minimal MCP server for a self-hosted Chatwoot instance",
   "type": "module",
-  "bin": { "chatwoot-mcp": "server.mjs" },
-  "engines": { "node": ">=18" },
+  "bin": {
+    "chatwoot-mcp": "server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "@napi-rs/canvas": "^1.1.1",
+    "unpdf": "^1.9.1",
     "zod": "^4.6.7"
   }
 }
